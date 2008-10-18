@@ -113,13 +113,22 @@ L:RegisterTranslations("enUS", function() return {
     ["Library"]                     = true,
     ["SUPPORTEDADDONSDESC"]         = "Supported add ons that can or are being used to track inventory",
     ["SHOWBANKALTCOUNTSNAME"]       = "Include bank and alt character contents",
-    ["SHOWBANKALTCOUNTSDESC"]       = "When calculating and displaying craftable itemn counts, include items from your bank and from your other characters",
+    ["SHOWBANKALTCOUNTSDESC"]       = "When calculating and displaying craftable item counts, include items from your bank and from your other characters",
     ["ENHANCHEDRECIPEDISPLAYNAME"]  = "Show recipe difficulty as text",
     ["ENHANCHEDRECIPEDISPLAYDESC"]  = "When enabled, recipe names will have one or more '+' characters appeneded to their name to inidcate the difficulty of the recipe.",
     ["SHOWCRAFTCOUNTSNAME"]         = "Show craftable counts",
     ["SHOWCRAFTCOUNTSDESC"]         = "Show the number of times you can craft a recipe, not the total number of items producable",
+		
+	-- New in version 1.11(?)
+	["craftable"]					= true,
+	["No Data"]						= true,
+	
+	["DISPLAYSHOPPINGLISTATGUILDBANKNAME"]			= "Display shopping list at guild banks",
+    ["DISPLAYSHOPPINGLISTATGUILDBANKDESC"]			= "Display a shopping list of the items that are needed to craft queued recipes but are not in your bags",
 
-    -- New in version 1.11
-    ["Crafted By"]                  = "Crafted by",
-
+	["By Item Level"]                    = true,
+	["By Skill Level"]                    = true,
+	
+	["Blizzard"]					= true,			-- as in, the company name
+	["Process"]						= true,
 } end)

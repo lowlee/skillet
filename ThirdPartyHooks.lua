@@ -120,7 +120,9 @@ function Skillet:AddButtonToTradeskillWindow(button)
     elseif AC_UseButton and button == AC_UseButton then
         armorcraft_custom_add()
     end
-
+	
+	button:Hide()
+	
     -- See if this button has already been added ....
     for i=1, #SkilletFrame.added_buttons, 1 do
         if SkilletFrame.added_buttons[i] == button then
@@ -128,6 +130,7 @@ function Skillet:AddButtonToTradeskillWindow(button)
             return SkilletFrame
         end
     end
+	
 
     -- ... nope
     table.insert(SkilletFrame.added_buttons, button)
@@ -426,7 +429,7 @@ end
 -- window will not be updated.
 --
 function Skillet:UpdateTradeSkillWindow()
-    return self:internal_UpdateTradeSkillWindow()
+	return self:internal_UpdateTradeSkillWindow()
 end
 
 --
@@ -471,12 +474,12 @@ end
 --
 -- You should not hook this method, you should call it directly.
 --
--- @param force if true, the list of recipes will be resorted, if false
---        then recipes will only be resorted if they have changed
 --
-function Skillet:ResortRecipes(force)
-    self:internal_ResortRecipes(force)
+-- returns the number of trade skills in the sorted and filtered list
+function Skillet:SortAndFilterRecipes()
+    return self:internal_SortAndFilterRecipes()
 end
+
 
 -- =================================================================
 --                Skillet Recipe API
@@ -594,8 +597,4 @@ end
 --
 function Skillet:GetCharacterTradeskills(character_name, profession)
     return self:internal_GetCharacterTradeskills(character_name, profession)
-end
-
-function Skillet:GetCraftersForItem(itemId)
-    return self:internal_GetCraftersForItem(itemId)
 end

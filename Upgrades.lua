@@ -83,5 +83,15 @@ function Skillet:UpgradeDataAndOptions()
         self.db.profile.show_bank_alt_counts = true
     end
 
+
+	-- remove pre 1.11(?) recipe storage
+	if self.db.server.recipes then
+        self.db.server.recipes[UnitName("player")] = nil
+    end
+    
+    -- remove pre 1.11(?) queue storage
+    if self.db.server.queues then
+    	self.db.server.queues = nil
+    end
 end
 

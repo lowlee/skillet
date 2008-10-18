@@ -116,14 +116,23 @@
         <OnClick>
             <!-- shift clicking will insert a link to the recipe in the chat window. -->
             if button == "LeftButton" and IsShiftKeyDown() then
-                ChatEdit_InsertLink(this.count .. "x" .. this.link)
-            end            
+				local name,link = GetItemInfo(this.id)
+				
+                ChatEdit_InsertLink(this.count .. "x" .. link)
+            end
+			
+			if button == "LeftButton" and IsAltKeyDown() then
+				if(CanSendAuctionQuery()) then
+					local name,link = GetItemInfo(this.id)
+					BrowseName:SetText(name)
+					AuctionFrameBrowse_Search()
+					BrowseNoResultsText:SetText(BROWSE_NO_RESULTS)
+				end
+			end
+			
         </OnClick>
-        <OnEnter>            
-            GameTooltip:SetOwner(this, "ANCHOR_CURSOR")
-            GameTooltip:SetHyperlink(this.link)
-            GameTooltip:Show()
-            CursorUpdate()
+        <OnEnter>
+        	Skillet:ShoppingListButton_OnEnter(this)
         </OnEnter>
         <OnLeave>
             GameTooltip:Hide()

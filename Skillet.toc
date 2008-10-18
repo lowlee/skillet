@@ -1,19 +1,17 @@
 ## Interface: 30000
 ## Title: Skillet |cff7fff7f -Ace2-|r
 ## Notes: A replacement tradeskill window
-## Notes-esES: Una sustitucion de la ventana de Habilidades de Comercio
-## Notes-ruRU: Заменяет окно профессий на более функциональное.
-## Author: nogudnik
+## Author: nogudnik, lilsparky
 ## Version 1.11
 ## X-Category: Tradeskill
 ## X-eMail: nogudnik@gmail.com
 ## X-License GPL v3 or later
-## X-Credits Slartie (for ASTW), Nymbia (for Stitch)
+## X-Credits Slartie (for ASTW)
 ## X-RelSite-WoWI: 7571
 ## X-AceForum: 9179
 ## X-WoWIPortal: nogudnik
-## X-Website: http://www.wowace.com/projects/skillet/
-## X-RelSite-Curse: http://wow.curse.com/downloads/wow-addons/details/skillet.aspx
+## X-Website: http://www.wowace.com/wiki/Skillet
+#### X-RelSite-Curse:
 #### X-RelSite-UI.WoW:
 ## SavedVariables: SkilletDB
 ## SavedVariablesPerCharacter: SkilletDBPC
@@ -21,26 +19,29 @@
 ## X-Embeds: Ace2, Waterfall-1.0, AbacusLib, LibPeriodicTable-3.1, WindowLib, LibStub
 
 #### List of embedded Ace2 libraries
-embeds.xml
+# embeds.xml
 
 #### Localization files
 Locale\Locale-enUS.lua
-Locale\Locale-ruRU.lua
 Locale\Locale-deDE.lua
 Locale\Locale-zhTW.lua
 Locale\Locale-zhCN.lua
 Locale\Locale-koKR.lua
 Locale\Locale-frFR.lua
 Locale\Locale-esES.lua
+Locale\Locale-ruRU.lua
 
 #### Main files
-LibPossessions.lua
-SkilletStitch-1.1.lua
+#LibPossessions.lua
 Skillet.lua
+SkilletData.lua
 TradeskillInfo.lua
 SkilletQueue.lua
 ThirdPartyHooks.lua
 Upgrades.lua
+SkillLevelData.lua
+RecipeGroups.lua
+Inventory.lua
 
 #### UI files
 UI\Utils.lua

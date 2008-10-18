@@ -25,39 +25,66 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
 -- item can be: itemID or "itemString" or "itemName" or "itemLink"
 function Skillet:GetLevelRequiredToUse(item)
+    if not item then return end
+    
     local level = select(5, GetItemInfo(item))
     if not level then level = 0 end
     return level
 end
 
--- Extracts the numeric item id from an item link
-function Skillet:GetItemIDFromLink(link)
-    local id
-    if link then
-        _,_,id = string.find(link, "|Hitem:(%d+):")
-    end
 
-    if link and not id then
-        -- might be an enchant ...
-        _,_,id = string.find(link, "|Henchant:(%d+)|")
-    end
-
-    if id then id = tonumber(id) end
-
-    return id
+function Skillet:GetItemIDFromLink(link)				-- works with items or enchants
+	if (link) then
+		local found, _, string = string.find(link, "^|c%x+|H(.+)|h%[.+%]")
+	
+		if found then
+			local _, id = strsplit(":", string)
+		
+			return tonumber(id);
+		else
+			return nil
+		end
+	end
 end
 
--- Wrapper that calls the correct Get*Info for crafts and trades as appropriate
-function Skillet:GetTradeSkillInfo(index)
-    if (not index) then return end
 
-    local skillName, skillType, numAvailable, isExpanded;
-    if self:IsCraft() then
-        skillName, craftSubSpellName, skillType, numAvailable, isExpanded = GetCraftInfo(index)
-    else
-        skillName, skillType, numAvailable, isExpanded = GetTradeSkillInfo(index)
-    end
-    return skillName, skillType, numAvailable, isExpanded;
+-- return GetItemInfo and automatically query server if not cached
+function Skillet:GetItemInfo(id)
+	if id then
+		local name = GetItemInfo(id)
+		
+		if not name then
+			GameTooltip:SetHyperlink("item:"..id)
+			GameTooltip:SetHyperlink("enchant:"..id)
+		end
+		
+		return GetItemInfo(id)
+	end
+end
+
+
+-- Wrapper that calls the correct Get*Info for crafts and trades as appropriate
+function Skillet:GetTradeSkillInfo(skillIndex)
+	local tradeID = self.currentTrade
+	local skill = self:GetSkill(self.currentPlayer, tradeID, skillIndex)
+
+	if skill then
+		local id = skill.id
+		local skillName = self:GetRecipeName(id)
+		local difficulty = skill.difficulty
+		
+		if id and id ~= 0 then
+			local recipe = self:GetRecipe(id)
+			
+			local numAvailable = (skill.numCraftableBank or 0) / (recipe.numMade or 1)
+			
+			return skillName, difficulty, numAvailable, 0	
+		else
+			return skillName, "header", 0, 1
+		end
+	else
+		return nil, nil, nil, nil
+	end
 end
 
 --
@@ -87,79 +114,201 @@ function Skillet:GetQualityFromLink(link)
     -- no match
 end
 
+
+-- Returns the name of the current trade skill
+function Skillet:GetTradeName(tradeID)
+	return (GetSpellInfo(tradeID))
+end
+
+
 -- Returns a link for the currently selected tradeskill item.
 -- The input is an index into the currently selected tradeskill
 -- or craft.
-function Skillet:GetTradeskillItemLink(index)
-    local s = self.stitch:GetItemDataByIndex(self.currentTrade, index);
-    local result = nil;
-
-    if s then
-        result = s.link
-    end
-
-    return result;
+function Skillet:GetTradeSkillItemLink(index)
+    local recipe, recipeID = self:GetRecipeDataByTradeIndex(self.currentTrade, index)
+	
+	if recipe then
+		local _, link = GetItemInfo(recipe.itemID)
+		
+		return link
+	end
+	
+	return nil
 end
+
+
+function Skillet:GetNumTradeSkills(tradeOverride, playerOverride)
+	local tradeID = tradeOverride or self.currentTrade
+	local player = playerOverride or self.currentPlayer
+	
+	local numSkills = #self.db.server.skillDB[playerOverride][tradeID]
+	
+	return numSkills
+end
+
+
+function Skillet:GetTradeSkillCooldown(skillIndex)
+	local skill = self.GetSkill(self.currentPlayer, self.currentTrade, skillIndex)
+	
+	if skill then
+		local coolDown = skill.cooldown
+		
+		local now = GetTime()
+		 
+		if coolDown then
+			return math.max(0,coolDown - now)
+		end
+	end
+end
+
+
+function Skillet:GetTradeSkillNumReagents(skillIndex)
+	local recipe = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
+
+    if recipe then
+ 		return #recipe.reagentData
+    end
+end
+
+
+function Skillet:GetTradeSkillReagentInfo(skillIndex, reagentIndex)
+	local recipe = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
+
+    if recipe then
+
+		local reagentID = recipe.reagentData[reagentIndex].id
+    	
+    	local reagentName = GetItemInfo(reagentID)
+		local reagentTexture = GetItemIcon(reagentID)
+    	local reagentCount = recipe.reagentData[reagentIndex].numNeeded
+    	local _,playerReagentCount = self:GetInventory(reagentID)
+    	
+    	
+    	return reagentName, reagentTexture, reagentCount, playerReagentCount
+    end
+end
+
+
 
 -- Returns a link for the reagent required to create the specified
 -- item, the index'th reagent required for the item is returned
-function Skillet:GetTradeSkillReagentItemLink(skill, index)
-    local s = self.stitch:GetItemDataByIndex(self.currentTrade, skill);
-    local result = nil;
+function Skillet:GetTradeSkillReagentItemLink(skillIndex, index)
+    if skillIndex and index then
+		local recipe = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
 
-    if s then
-        local reagent = s[index];
-        if reagent then
-            result = reagent.link
-        end
-    end
-
-    return result;
+		if recipe and recipe.reagentData[index] then
+			local _, link = GetItemInfo(recipe.reagentData[index].id)
+			return link;
+		end
+	end
+	
+    return nil
 end
+
 
 -- Gets a link to the recipe (not the item creafted by the recipe)
 -- for the current tradeskill
-function Skillet:GetTradeSkillRecipeLink(index)
-    if self:IsCraft() then
-        return GetCraftRecipeLink(index);
-    else
-        return GetTradeSkillRecipeLink(index);
-    end
+function Skillet:GetTradeSkillRecipeLink(skillIndex)
+	local recipe, id = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
+
+	if recipe and recipe.spellID then
+-- DEFAULT_CHAT_FRAME:AddMessage(recipe.spellID or "nil")
+		local link = GetSpellLink(recipe.spellID)		
+		
+		return link
+	end
+	
+	return nil
 end
+
+
+function Skillet:GetTradeSkillTools(skillIndex)
+	local skill = self:GetSkill(self.currentPlayer, self.currentTrade, skillIndex)
+	
+	if skill then
+		local recipe = self:GetRecipe(skill.id)
+		local toolList = {}
+		
+		for i=1,#recipe.tools do
+			toolList[i*2-1] = recipe.tools[i]
+			toolList[i*2  ] = skill.tools[i] or 1
+		end
+		
+		return unpack(toolList)
+	end
+end
+
+
+
 
 -- Gets the trade skill line, and knows how to do the right
 -- thing depending on whether or not this is a craft.
 function Skillet:GetTradeSkillLine()
-    local tradeskillName, currentLevel, maxLevel;
-    if self:IsCraft() then
-        tradeskillName, currentLevel, maxLevel = GetCraftDisplaySkillLine();
-    else
-        tradeskillName, currentLevel, maxLevel = GetTradeSkillLine();
-    end
-    if(tradeskillName==nil) then
-        tradeskillName = "";
-    end
-    return tradeskillName, currentLevel, maxLevel;
+	local name, rank, maxRank = GetTradeSkillLine()
+	
+	if not name then
+		name, rank, maxRank = GetCraftDisplaySkillLine()
+	end
+	
+	if self.currentPlayer == (UnitName("player")) and self.currentTrade == name then
+		return name, rank, maxRank
+	else
+		local rankData = self.db.server.skillRanks[self.currentPlayer]
+		
+		if rankData[self.currentPlayer] then
+			return self.currentTrade, rankData[self.currentTrade].rank, rankData[self.currentTrade].maxRank
+		else
+			return "???", 1, 1
+		end
+	end
 end
+
 
 -- Returns the number of trade or craft skills
 function Skillet:GetNumTradeSkills()
-    local stitch_count = self.stitch:GetNumSkills(self.currentTrade)
-    if not stitch_count then
-        stitch_count = 0
-    end
-
-    local blizz_count = 0
-
-    if self:IsCraft() then
-        blizz_count = GetNumCrafts()
-    else
-        blizz_count = GetNumTradeSkills()
-    end
-
-    return math.max(stitch_count, blizz_count)
+    return self:GetNumSkills(self.currentTrade)
 end
 
+function Skillet:GetTradeSkillCooldown(index)
+	local skill = self:GetSkill(self.currentPlayer, self.currentTrade, index)
+	
+	if skill and skill.cooldown then
+		local cooldown = skill.cooldown - GetTime()
+		
+		if cooldown > 0 then
+			return cooldown
+		end
+	end
+end
+
+
+function Skillet:GetTradeSkillIcon(skillIndex)
+	local recipe = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
+	local texture
+	
+	if recipe then
+		if recipe.numMade > 0 then
+			texture = GetItemIcon(recipe.itemID)						-- get the item texture
+		else
+			texture = "Interface\\Icons\\Spell_Holy_GreaterHeal"		-- standard enchant icon
+		end
+	end
+	
+	return texture or "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
+
+function Skillet:GetTradeSkillNumMade(skillIndex)
+	local recipe = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
+	
+	if recipe then
+		return recipe.numMade, recipe.numMade
+	end
+	
+	return 1,1
+end
+
+--[[
 -- =====================================================================
 --                      TradeSkill Query API
 -- =====================================================================
@@ -178,7 +327,7 @@ local function build_reagents(self, s, reagent)
 end
 
 local function build_skills(self, name, prof, skill_index)
-    local s = self.stitch:DecodeRecipe(self.db.server.recipes[name][prof][skill_index])
+    local s = self:DecodeRecipe(self.db.server.recipes[name][prof][skill_index])
     local c = {
         name = s.name,
         link = s.link,
@@ -229,11 +378,6 @@ local function build_characters(self)
     return c
 end
 
-function Skillet:internal_ResetCharacterCache()
-    characters = nil
-    Skillet:internal_GetCharacters()
-end
-
 function Skillet:internal_GetCharacters()
     if not characters then
         characters = build_characters(self)
@@ -263,29 +407,4 @@ function  Skillet:internal_GetCharacterTradeskills(character_name, profession)
         end
     end
 end
-
-function Skillet:internal_GetCraftersForItem(itemId)
-	local crafters = nil
-
-	local chars = self:internal_GetCharacters()
-	for i=1, #chars, 1 do
-		local profs = self:internal_GetCharacterProfessions(chars[i].name)
-		local found = false
-
-		for j=1,#profs,1 do
-			local skills = self:internal_GetCharacterTradeskills(chars[i].name, profs[j].name)
-			for k=1,#skills,1 do
-				if self:GetItemIDFromLink(skills[k].link) == itemId then
-					if not crafters then crafters = {} end
-					table.insert(crafters, chars[i].name)
-					found = true
-					break
-				end
-			end
-			if found then break end
-		end
-
-	end
-
-	return crafters
-end
+]]

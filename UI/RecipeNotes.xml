@@ -76,7 +76,7 @@
 		</button>
 	</Frames>
 	<Attributes>
-        <Attribute name="recipe_link" value="-1"/>
+        <Attribute name="notes_key" value="item:-1"/>
     </Attributes>
 	<Scripts>
 		<OnClick>
