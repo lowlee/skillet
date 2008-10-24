@@ -749,7 +749,7 @@ end
 
 
 -- The method we use the initialize the grouping drop down.
-function SkilletRecipeGroupDropdown_Initialize(level)
+function SkilletRecipeGroupDropdown_Initialize(menuFrame,level)
 DebugSpam("init dropdown")
     if level == 1 then  -- group labels
 --		Skillet:RecipeGroupDeconstructDBStrings()
@@ -836,7 +836,7 @@ DebugSpam("init dropdown")
 end
 
 -- Called when the user selects an item in the sorting drop down
-function Skillet:RecipeGroupSelect(label)
+function Skillet:RecipeGroupSelect(menuFrame,label)
 DebugSpam("select grouping "..label)
 	Skillet:SetTradeSkillOption("grouping", label)
 	
@@ -880,7 +880,7 @@ end
 
 
 -- The method we use the initialize the group ops drop down.
-function SkilletRecipeGroupOpsMenu_Init(level)
+function SkilletRecipeGroupOpsMenu_Init(menuFrame,level)
     if level == 1 then
 		local entry = {}
 		local null = {}

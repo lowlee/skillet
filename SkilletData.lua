@@ -649,7 +649,7 @@ DebugSpam("AUTO RESCAN COMPLETE")
 
 local elapsed = GetTime() - start
 
-DEFAULT_CHAT_FRAME:AddMessage("Skillet Auto-Rescan: "..(math.floor(elapsed*100+.5)/100).." seconds")
+--DEFAULT_CHAT_FRAME:AddMessage("Skillet Auto-Rescan: "..(math.floor(elapsed*100+.5)/100).." seconds")
 end
 
 
@@ -664,7 +664,7 @@ end
 
 
 function Skillet:CHAT_MSG_SKILL()
-DEFAULT_CHAT_FRAME:AddMessage("CHAT_MSG_SKILL "..(event or "nil"))
+--DEFAULT_CHAT_FRAME:AddMessage("CHAT_MSG_SKILL "..(event or "nil"))
 --	self:Skillet_AutoRescan()									-- the problem here is that the message comes before the actuality, it seems
 	if AceEvent:IsEventScheduled("Skillet_AutoRescan") then
 		AceEvent:CancelScheduledEvent("Skillet_AutoRescan")
@@ -1256,9 +1256,7 @@ local TSITradeIDs = {
 	T = 3908,           -- tailoring
 	W = 2550,           -- cooking
 	X = 3273,           -- first aid
-	Z = 2842,           -- poisons
-	
---	5149, 			-- beast training (not supported, but i need to know the number)... err... or maybe i don't
+--	Z = 2842,           -- poisons
 }
 
 
@@ -1298,11 +1296,13 @@ DebugSpam("tsi: "..player)
 			local t = TradeskillInfo:GetCombineSkill(i)
 			
 			local tradeID = TSITradeIDs[t]
---DebugSpam((t or "nil") .. " = "..(tradeID or "nil"))
+DebugSpam((t or "nil") .. " = "..(tradeID or "nil"))
 			
-			skillList[tradeID][#skillList[tradeID] + 1] = i
+			if tradeID then
+				skillList[tradeID][#skillList[tradeID] + 1] = i
 			
-			Skillet.data.skillIndexLookup[player]["tsi/"..i] = #skillList[tradeID]
+				Skillet.data.skillIndexLookup[player]["tsi/"..i] = #skillList[tradeID]
+			end
 		end
 	end
 	

@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ]]--
 
-local MAJOR_VERSION = "1.11"
+local MAJOR_VERSION = "1.10-LS"
 local MINOR_VERSION = ("$Revision$"):match("%d+") or 1
 local DATE = string.gsub("$Date$", "^.-(%d%d%d%d%-%d%d%-%d%d).-$", "%1")
 
@@ -112,9 +112,7 @@ local L = AceLibrary("AceLocale-2.2"):new("Skillet")
 -- Events
 local AceEvent = AceLibrary("AceEvent-2.0")
 
--- Are we display a craft window or a trade window
--- This is a runtime only variable
-local isCraft = false;
+
 
 -- All the options that we allow the user to control.
 local Skillet = Skillet
@@ -439,16 +437,10 @@ function Skillet:OnInitialize()
 	if (not IsAddOnLoaded("Blizzard_TradeSkillUI")) then
 		LoadAddOn("Blizzard_TradeSkillUI");
 	end
-		
-	if (not IsAddOnLoaded("Blizzard_CraftUI")) then
-		LoadAddOn("Blizzard_CraftUI");
-	end
 	
 	self.BlizzardTradeSkillFrame = TradeSkillFrame
 	self.BlizzardTradeSkillFrame_Show = TradeSkillFrame_Show
-	self.BlizzardCraftFrame_Show = CraftFrame_Show
 	
-	CraftFrame_Show = DoNothing								-- don't need to hide the standard frames if you never show them!
 	TradeSkillFrame_Show = DoNothing
 	
     self:RegisterChatCommand({"/skillet"}, self.options, "SKILLET")
@@ -599,8 +591,6 @@ function Skillet:OnEnable()
 	self:RegisterEvent("TRADE_SKILL_CLOSE",				"SkilletClose")
 	self:RegisterEvent("TRADE_SKILL_SHOW",				"SkilletShow")
 --	self:RegisterEvent("TRADE_SKILL_UPDATE")
-    self:RegisterEvent("CRAFT_SHOW",					"SkilletShow")
-	self:RegisterEvent("CRAFT_CLOSE",					"SkilletClose")
 
     -- TODO: Tracks when the number of items on hand changes				
 	self:RegisterEvent("BAG_UPDATE")
@@ -630,11 +620,6 @@ function Skillet:OnEnable()
 
 --    self:RegisterEvent("SkilletStitch_Scan_Complete",  "ScanCompleted")
 
-    -- These we have to handle ourselves becuase we do crafts directly,
-    -- rather than through the Stitch libary.
---	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED",   "CraftCastEnded")
---	self:RegisterEvent("UNIT_SPELLCAST_FAILED",      "CraftCastEnded")
---	self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", "CraftCastEnded")
 
     self.hideUncraftableRecipes = false
     self.hideTrivialRecipes = false
@@ -714,6 +699,7 @@ DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
 	
 --DEFAULT_CHAT_FRAME:AddMessage("SkilletShow")
 	
+--[[
 	if self.currentTrade then
 		if self.craftOpen and event == "TRADE_SKILL_SHOW" then		-- crafting is open, but we've been asked to show tradeskills
 			self.craftOpen = false
@@ -725,25 +711,19 @@ DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
 			CloseTradeSkill()
 		end
 	end
+]]
 	
-	if event == "TRADE_SKILL_SHOW" then
-		isCraft = false
-		self.currentTrade = self.tradeSkillIDsByName[(GetTradeSkillLine())] or 2656      -- smelting caveat
-	else
-		isCraft = true
-		self.currentTrade = self.tradeSkillIDsByName[(GetCraftDisplaySkillLine())] or nil    -- if not enchanting, then nil
-	end
+	
+	self.currentTrade = self.tradeSkillIDsByName[(GetTradeSkillLine())] or 2656      -- smelting caveat
+	
 	
 	self:InitializeDatabase(self.currentPlayer)
 	
 	if self:IsSupportedTradeskill(self.currentTrade) then
 		self:InventoryScan()
 	
-		if event == "TRADE_SKILL_SHOW" then
-			self.tradeSkillOpen = true
-		else
-			self.craftOpen = true
-		end
+		
+		self.tradeSkillOpen = true
 DebugSpam("SkilletShow: "..self.currentTrade)
 		
 		self.selectedSkill = nil
@@ -798,12 +778,7 @@ DebugSpam("SkilletShow: "..self.currentTrade)
 		self.dataSource = "api"
 	else
 		self:HideAllWindows()
-		
-		if event == "TRADE_SKILL_SHOW" then
-			self:BlizzardTradeSkillFrame_Show()
-		else
-			self:BlizzardCraftFrame_Show()
-		end
+		self:BlizzardTradeSkillFrame_Show()
 	end
 end
 
@@ -825,37 +800,11 @@ end
 function Skillet:SkilletClose()
 DebugSpam("SKILLET CLOSE")
 	if self.dataSource == "api" then			-- if the skillet system is using the api for data access, then close the skillet window
-		
-		if event == "TRADE_SKILL_CLOSE" then
-			if self.tradeSkillOpen then
-				self:HideAllWindows()
-				
-				self:FreeCaches()
-			end
-			
-			self.tradeSkillOpen = false
-		else
-			if self.craftOpen then
-				self:HideAllWindows()
-					
-				self:FreeCaches()
-			end
-			
-			self.craftOpen = false
-		end
+		self:HideAllWindows()
+		self:FreeCaches()
 	end
 end
 
-
-
-function Skillet:CraftCastEnded(unit)
-	if unit == "player" and isCraft then
-        -- Pretend we're Stitch.
-        -- Crafting can only be done one item at a time so
-	    -- pretend we're done.
-	    AceEvent:TriggerEvent("Skillet_Queue_Complete")
-	end
-end
 
 -- Rescans the trades (and thus bags). Can only be called if the tradeskill
 -- window is open and a trade selected.
@@ -958,7 +907,6 @@ DebugSpam("cast: "..self:GetTradeName(tradeID))
         else
             self.dataSource = "cache"
 			CloseTradeSkill()
-			CloseCraft()
 
 			self.dataScanned = false
 			
@@ -1141,13 +1089,6 @@ function Skillet:SetSelectedSkill(skillIndex, wasClicked)
 	self:UpdateDetailsWindow(skillIndex)
 end
 
---
--- Checks to see if the currently selected profession is a craft or a
--- tradeskill
---
-function Skillet:IsCraft()
-	return (isCraft and isCraft == true)
-end
 
 -- Updates the text we filter the list of recipes against.
 function Skillet:UpdateFilter(text)
@@ -1314,13 +1255,13 @@ function Skillet:SetTradeSkillOption(option, value, playerOverride, tradeOverrid
 end
 
 
-function ProfessionPopup_SelectPlayerTrade(player,tradeID)
+function ProfessionPopup_SelectPlayerTrade(menuFrame,player,tradeID)
 	ToggleDropDownMenu(1, nil, ProfessionPopupFrame, this, this:GetWidth(), 0)
 	Skillet:SetTradeSkill(player,tradeID)
 end
 
 
-function ProfessionPopup_Init(level)
+function ProfessionPopup_Init(menuFrame, level)
 	if (level == 1) then  -- character names
 		local title = {}
 		local playerMenu = {}

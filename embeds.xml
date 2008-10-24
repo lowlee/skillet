@@ -13,7 +13,7 @@
 <Script file="Libs\Window-1.0\Window-1.0.lua"/>
 <Script file="Libs\Waterfall-1.0\Waterfall-1.0.lua"/>
 <Script file="Libs\Abacus-2.0\Abacus-2.0.lua"/>
-<Script file="Libs\LibPeriodicTable-3.1\LibPeriodicTable-3.1\LibPeriodicTable-3.1.lua"/>
+<Script file="Libs\LibPeriodicTable-3.1\LibPeriodicTable-3.1.lua"/>
 <Script file="Libs\LibPeriodicTable-3.1\LibPeriodicTable-3.1-Tradeskill\LibPeriodicTable-3.1-Tradeskill.lua"/>
 <Script file="Libs\LibPeriodicTable-3.1\LibPeriodicTable-3.1-TradeskillResultMats\LibPeriodicTable-3.1-TradeskillResultMats.lua"/>
 <Script file="Libs\LibStub\LibStub.lua"/>

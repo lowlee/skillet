@@ -571,7 +571,9 @@ function Skillet:TradeButton_OnEnter(button)
 		
 		GameTooltip:AddLine("["..rank.."/"..maxRank.."]",0,1,0)
 		
-		GameTooltip:AddLine("shift-click to link")
+		if tradeID == self.currentTrade then
+			GameTooltip:AddLine("shift-click to link")
+		end
 	end
 	
 	GameTooltip:Show()
@@ -589,11 +591,7 @@ function Skillet:TradeButton_OnClick(button)
 
 	if arg1 == "LeftButton" then
 		if player == UnitName("player") or (data and data ~= "") then
-			
-			self:SetTradeSkill(self.currentPlayer, tradeID)
-			button:SetChecked(1)
-			
-			if IsShiftKeyDown() then
+			if self.currentTrade == tradeID and IsShiftKeyDown() then
 				local link=GetTradeSkillListLink()
 				
 				if (ChatFrameEditBox:IsVisible() or WIM_EditBoxInFocus ~= nil) then
@@ -602,6 +600,9 @@ function Skillet:TradeButton_OnClick(button)
 					DEFAULT_CHAT_FRAME:AddMessage(link)
 				end
 			end
+			
+			self:SetTradeSkill(self.currentPlayer, tradeID)
+			button:SetChecked(1)
 		else
 			button:SetChecked(0)
 		end
@@ -3172,7 +3173,7 @@ end
 local ARLProfessionTable
 
 function ARLProfessionTableInit()
-DEFAULT_CHAT_FRAME:AddMessage("INIT ARL STUFF!")
+--DEFAULT_CHAT_FRAME:AddMessage("INIT ARL STUFF!")
 	local t = {
 		[2259] = AckisRecipeList.InitAlchemy,
 		[2018] = AckisRecipeList.InitBlackSmith,
@@ -3180,11 +3181,12 @@ DEFAULT_CHAT_FRAME:AddMessage("INIT ARL STUFF!")
 		[4036] = AckisRecipeList.InitEngineering,
 		[3273] = AckisRecipeList.InitFirstAid,
 		[2108] = AckisRecipeList.InitLeatherWorking,
-		[2842] = AckisRecipeList.InitRoguePoison,
+--		[2842] = AckisRecipeList.InitRoguePoison,
 		[2656] = AckisRecipeList.InitSmelting,
 		[3908] = AckisRecipeList.InitTailoring,
 		[25229] = AckisRecipeList.InitJewelcrafting,
 		[7411] = AckisRecipeList.InitEnchanting,
+		[45357] = AckisRecipeList.InitInscription,
 	}
 
 	return t

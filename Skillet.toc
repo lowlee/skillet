@@ -2,7 +2,7 @@
 ## Title: Skillet |cff7fff7f -Ace2-|r
 ## Notes: A replacement tradeskill window
 ## Author: nogudnik, lilsparky
-## Version 1.11
+## Version 1.10-LS
 ## X-Category: Tradeskill
 ## X-eMail: nogudnik@gmail.com
 ## X-License GPL v3 or later
@@ -19,7 +19,7 @@
 ## X-Embeds: Ace2, Waterfall-1.0, AbacusLib, LibPeriodicTable-3.1, WindowLib, LibStub
 
 #### List of embedded Ace2 libraries
-# embeds.xml
+embeds.xml
 
 #### Localization files
 Locale\Locale-enUS.lua
