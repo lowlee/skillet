@@ -694,8 +694,13 @@ end
 -- this means, the skill being shown is for the main toon (not an alt)
 function Skillet:SkilletShow()
 DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
-
-	self.currentPlayer = (UnitName("player"))
+	
+	if (IsTradeSkillLinked()) then
+		_, self.currentPlayer = IsTradeSkillLinked()
+	else
+		self.currentPlayer = (UnitName("player"))
+	end
+	
 	
 --DEFAULT_CHAT_FRAME:AddMessage("SkilletShow")
 	

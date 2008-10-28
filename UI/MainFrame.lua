@@ -332,7 +332,7 @@ function Skillet:ResetTradeSkillWindow()
 			end
 		end
 	 else
-	 	SkilletPluginButton:Hide()
+--	 	SkilletPluginButton:Hide()
 	 end
 end
 
@@ -1866,23 +1866,19 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 			ARLProfessionTable = ARLProfessionTableInit()
 		end
 		
-		if not AckisRecipeList.RecipeListing then -- and not AckisRecipeList.MissingRecipeListing then
+		if not AckisRecipeList.RecipeListing then 
 			AckisRecipeList:InitializeRecipeArray()
 		
 			ARLProfessionTable[recipe.tradeID](AckisRecipeList)
 		end
 		
-		if not AckisRecipeList.RecipeListing[recipe.name] then -- and not AckisRecipeList.MissingRecipeListing[recipe.name] then
+		if not AckisRecipeList.RecipeListing[recipe.name] then
 			ARLProfessionTable[recipe.tradeID](AckisRecipeList)
 		end
 		
 		if AckisRecipeList.RecipeListing[recipe.name] then
 			extra_text = AckisRecipeList.RecipeListing[recipe.name]["Acquire"]
 		end
-		
---		if AckisRecipeList.MissingRecipeListing and AckisRecipeList.MissingRecipeListing[recipe.name] then
---			extra_text = AckisRecipeList.MissingRecipeListing[recipe.name]["Acquire"]
---		end
 	end
 	
 	
@@ -1906,15 +1902,18 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 				if not extra_text then
 					extra_text = "Trained ("..(TradeskillInfo:GetCombineLevel(tsiRecipeID) or "??")..")"
 				end
+				
+					--		SkilletExtraDetailText.dataSource = "TradeSkillInfo Mod - version "..(TradeskillInfo.version or "?")
+--				local _, link = GetItemInfo(combineID)
+--DEFAULT_CHAT_FRAME:AddMessage("recipe: "..(link or combineID))	
+				if bopCheck(combineID) then
+					bop = true
+				end
+			
 			else
 				extra_text = "|cffff0000Unknown|r"
 			end
-	--		SkilletExtraDetailText.dataSource = "TradeSkillInfo Mod - version "..(TradeskillInfo.version or "?")
-			local _, link = GetItemInfo(combineID)
---DEFAULT_CHAT_FRAME:AddMessage("recipe: "..(link or combineID))	
-			if bopCheck(combineID) then
-				bop = true
-			end
+
 		else
 			extra_text = "can't find recipeID for item "..recipe.itemID
 		end

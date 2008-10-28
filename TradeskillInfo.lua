@@ -246,11 +246,7 @@ end
 function Skillet:GetTradeSkillLine()
 	local name, rank, maxRank = GetTradeSkillLine()
 	
-	if not name then
-		name, rank, maxRank = GetCraftDisplaySkillLine()
-	end
-	
-	if self.currentPlayer == (UnitName("player")) and self.currentTrade == name then
+	if self.currentPlayer == (UnitName("player")) then -- and self.currentTrade == name then
 		return name, rank, maxRank
 	else
 		local rankData = self.db.server.skillRanks[self.currentPlayer]
@@ -258,7 +254,7 @@ function Skillet:GetTradeSkillLine()
 		if rankData[self.currentPlayer] then
 			return self.currentTrade, rankData[self.currentTrade].rank, rankData[self.currentTrade].maxRank
 		else
-			return "???", 1, 1
+			return "UNKNOWN", 1, 1
 		end
 	end
 end

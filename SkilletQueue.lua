@@ -381,7 +381,7 @@ end
 
 -- Removes an item from the queue
 function Skillet:RemoveQueuedCommand(queueIndex)
-	if queueIndex == 1 and not self:IsCraft() then
+	if queueIndex == 1 then
         self:CancelCast()
     end
 	
