@@ -860,8 +860,8 @@ function Skillet:internal_UpdateTradeSkillWindow()
 --	SkilletHideTrivialRecipes:SetChecked(self:GetTradeSkillOption("hidetrivial"))
 	self:RecipeDifficultyButton_OnShow()
 	SkilletHideUncraftableRecipes:SetChecked(self:GetTradeSkillOption("hideuncraftable"))
-	self:SortDropdown_OnShow()
-	self:RecipeGroupDropdown_OnShow()
+--	self:SortDropdown_OnShow()
+--	self:RecipeGroupDropdown_OnShow()
 	
 	self:UpdateQueueWindow()
 
@@ -886,7 +886,7 @@ function Skillet:internal_UpdateTradeSkillWindow()
 --    self:SetReservedReagentsList(queued_reagents);
 	
 		
-	local rank,maxRank = string.split(" ", self:GetSkillRanks(self.currentPlayer, self.currentTrade))
+	local rank,maxRank = string.split(" ", self:GetSkillRanks(self.currentPlayer, self.currentTrade) or "0 0")
 	
 	rank = tonumber(rank)
 	maxRank = tonumber(maxRank)

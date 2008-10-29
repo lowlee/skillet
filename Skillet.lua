@@ -697,6 +697,7 @@ DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
 	
 	if (IsTradeSkillLinked()) then
 		_, self.currentPlayer = IsTradeSkillLinked()
+		self:RegisterPlayerDataGathering(self.currentPlayer,SkilletLink,"sk")
 	else
 		self.currentPlayer = (UnitName("player"))
 	end
@@ -1280,14 +1281,16 @@ function ProfessionPopup_Init(menuFrame, level)
 		for player, gatherModule in pairs(Skillet.dataGatheringModules) do
 			skillData = gatherModule.ScanPlayerTradeSkills(gatherModule, player)
 		
-			playerMenu.text = player
-			playerMenu.hasArrow = true
-			playerMenu.value = player
-			playerMenu.disabled = false
+			if skillData then
+				playerMenu.text = player
+				playerMenu.hasArrow = true
+				playerMenu.value = player
+				playerMenu.disabled = false
 
-			
-			UIDropDownMenu_AddButton(playerMenu)
-			i = i + 1
+				
+				UIDropDownMenu_AddButton(playerMenu)
+				i = i + 1
+			end
 		end
 		
 		if (i == 1) then
@@ -1312,7 +1315,7 @@ function ProfessionPopup_Init(menuFrame, level)
 		
 		for i=1,#Skillet.tradeSkillList do
 			local tradeID = Skillet.tradeSkillList[i]
-			local list = skillRanks[tradeID]
+			local list = Skillet:GetSkillRanks(UIDROPDOWNMENU_MENU_VALUE, tradeID)
 			
 			if list then
 
@@ -1331,7 +1334,7 @@ function ProfessionPopup_Init(menuFrame, level)
 					skillButton.checked = false
 				end
 				
-				if UIDROPDOWNMENU_MENU_VALUE ~= (UnitName("player")) and skillRanks[tradeID]=="" then
+				if UIDROPDOWNMENU_MENU_VALUE ~= (UnitName("player")) and not list then
 					skillButton.disabled = true
 				else
 					skillButton.disabled = false

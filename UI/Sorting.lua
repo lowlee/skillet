@@ -333,14 +333,16 @@ local function SortAndFilterRecipes()
 	if filtertext and filtertext ~= "" or groupLabel == "Flat" then
 		for i=1, numSkills, 1 do
 			local skill = Skillet:GetSkill(Skillet.currentPlayer, Skillet.currentTrade, i)
-			local recipe = Skillet:GetRecipe(skill.id)
+			if skill then
+				local recipe = Skillet:GetRecipe(skill.id)
 			
-			if skill.id ~= 0 then							-- not a header
-               	if not SkillIsFilteredOut(i) then		-- skill is not filtered out
-                	button_index = button_index + 1
-					sortedSkillList[button_index] = {["recipeID"] = skill.id, ["spellID"] = recipe.spellID, ["name"] = recipe.name, ["skillIndex"] = i, ["skillData"] = skill, ["depth"] = 0}
-                end
-            end
+				if skill.id ~= 0 then							-- not a header
+					if not SkillIsFilteredOut(i) then		-- skill is not filtered out
+						button_index = button_index + 1
+						sortedSkillList[button_index] = {["recipeID"] = skill.id, ["spellID"] = recipe.spellID, ["name"] = recipe.name, ["skillIndex"] = i, ["skillData"] = skill, ["depth"] = 0}
+					end
+				end
+			end
         end
         
 		if oldLength > button_index then

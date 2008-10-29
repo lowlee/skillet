@@ -47,6 +47,7 @@ local TradeSkillList = {
 
 
 SkilletData = {}				-- skillet data scanner
+SkilletLink = {}
 
 
 local TradeSkillIDsByName = {}		-- filled in with ids and names for reverse matching (since the same name has multiple id's based on level)
@@ -234,6 +235,10 @@ function SkilletData:ResetTradeSkillFilter()
 end
 
 
+function SkilletLink:ResetTradeSkillFilter()
+	SetTradeSkillItemNameFilter("")	 			
+	SetTradeSkillItemLevelFilter(0,0)
+end
 
 
 
@@ -382,6 +387,8 @@ end
 
 
 function Skillet:GetNumSkills(player, trade)
+
+	
 	local skillModule = self.dataGatheringModules[player]
 	
 	if skillModule then
@@ -392,12 +399,44 @@ end
 
 
 
-function Skillet:GetSkillRanks(player, trade)
+function Skillet:GetSkillRanks(player, trade)	
 	local skillModule = self.dataGatheringModules[player]
 	
 	if skillModule then
 		return skillModule.GetSkillRanks(skillModule, player, trade)
 	end
+end
+
+
+function SkilletLink:GetSkillRanks(player, trade)
+	if (IsTradeSkillLinked()) then
+		local _, linkedPlayer = IsTradeSkillLinked()
+		
+		if linkedPlayer == player then
+			local skill, rank, max = GetTradeSkillLine()
+		
+			if GetSpellInfo(trade) == skill then
+				return rank.." "..max
+			end
+		end
+	end
+end
+
+
+function SkilletLink:GetNumSkills(player, trade)
+	if (IsTradeSkillLinked()) then
+		local _, linkedPlayer = IsTradeSkillLinked()
+		
+		if linkedPlayer == player then
+			local skill, rank, max = GetTradeSkillLine()
+			
+			if GetSpellInfo(trade) == skill then
+				return GetNumTradeSkills()
+			end
+		end
+	end
+	
+	return 0
 end
 
 
@@ -412,9 +451,8 @@ end
 
 
 
-
 function Skillet:GetSkill(player,trade,index)
---DEFAULT_CHAT_FRAME:AddMessage("getrecipe "..(id or "nil"))
+--DEFAULT_CHAT_FRAME:AddMessage("getrecipe "..(id or "nil")
 	
 	local skillModule = self.dataGatheringModules[player]
 	
@@ -424,6 +462,346 @@ function Skillet:GetSkill(player,trade,index)
 		return self.unknownRecipe, 0
 	end
 end
+
+
+
+
+function SkilletLink:GetSkill(player,trade,index)
+	if player and trade and index then
+		if not Skillet.data.skillList[player] then
+			self:RescanTrade()
+		end
+		
+		return Skillet.data.skillList[player][trade][index]
+	end
+end
+
+
+
+-- reconstruct a recipe from a recipeString and cache it into our system for this session
+function SkilletLink:GetRecipe(id)
+	if not id or id == 0 then return self.unknownRecipe end
+--DEFAULT_CHAT_FRAME:AddMessage("skilletData "..(id or "nil"))
+
+	if (not Skillet.data.recipeList[id]) then	
+		self:RescanTrade()
+--DEFAULT_CHAT_FRAME:AddMessage("can't find recipe "..id);
+	end
+	
+	return Skillet.data.recipeList[id] or Skillet.unknownRecipe
+end
+
+
+
+
+
+function SkilletLink:ScanTrade()
+DebugSpam("ScanTrade")
+	if self.scanInProgress == true then
+DebugSpam("SCAN BUSY!")
+		return
+	end
+	
+	self.scanInProgress = true
+	
+	local tradeID
+	
+	local API = {}
+	
+	local profession, rank, maxRank = GetTradeSkillLine()
+DebugSpam("GetTradeSkill: "..(profession or "nil"))
+
+	
+	-- get the tradeID from the profession name (data collected earlier).
+	tradeID = TradeSkillIDsByName[profession] or 2656				-- "mining" doesn't exist as a spell, so instead use smelting (id 2656)
+
+	if tradeID ~= Skillet.currentTrade then
+DebugSpam("TRADE MISMATCH for player "..(Skillet.currentPlayer or "nil").."!  "..(tradeID or "nil").." vs "..(Skillet.currentTrade or "nil"));
+	end
+
+	
+	local player = Skillet.currentPlayer
+	
+	if not self.recacheRecipe then
+		self.recacheRecipe = {}
+	end
+	
+	self:ResetTradeSkillFilter()						-- verify the search filter is blank (so we get all skills)
+
+	
+	local numSkills = GetNumTradeSkills()
+	
+DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "..numSkills.." recipes")
+
+	if not Skillet.data.skillIndexLookup[player] then
+		Skillet.data.skillIndexLookup[player] = {}
+	end
+	
+	local skillData = Skillet.data.skillList[player][tradeID]
+
+	local lastHeader = nil
+	local gotNil = false
+	
+	local currentGroup = nil
+	
+	local mainGroup = Skillet:RecipeGroupNew(player,tradeID,"Blizzard")
+	
+	mainGroup.locked = true
+	
+	Skillet:RecipeGroupClearEntries(mainGroup)
+	
+	local groupList = {}
+	
+	
+	for i = 1, numSkills, 1 do
+		repeat
+--DebugSpam("scanning index "..i)
+			local skillName, skillType, isExpanded, subSpell, extra
+			
+			
+			skillName, skillType, _, isExpanded = GetTradeSkillInfo(i)
+			
+			
+--DebugSpam("**** skill: "..(skillName or "nil"))
+
+			gotNil = false
+		
+			
+			if skillName then
+				if skillType == "header" then
+					if not isExpanded then
+						ExpandTradeSkillSubClass(i)
+					end
+
+					local groupName
+					
+					if groupList[skillName] then
+						groupList[skillName] = groupList[skillName]+1
+						groupName = skillName.." "..groupList[skillName]
+					else
+						groupList[skillName] = 1
+						groupName = skillName
+					end
+					
+--					skillDB[i] = "header "..skillName
+					skillData[i] = nil
+					
+					currentGroup = Skillet:RecipeGroupNew(player, tradeID, "Blizzard", groupName)
+					
+					Skillet:RecipeGroupAddSubGroup(mainGroup, currentGroup, i)
+				else
+					local recipeLink = GetTradeSkillRecipeLink(i)
+					local recipeID = Skillet:GetItemIDFromLink(recipeLink)
+					
+					if not recipeID then
+						gotNil = true
+						break
+					end
+					
+					if currentGroup then
+						Skillet:RecipeGroupAddRecipe(currentGroup, recipeID, i)
+					else
+						Skillet:RecipeGroupAddRecipe(mainGroup, recipeID, i)
+					end
+					
+					
+					-- break recipes into lists by profession for ease of sorting
+					skillData[i] = {}
+				
+	--					skillData[i].name = skillName
+					skillData[i].id = recipeID					
+					skillData[i].difficulty = skillType
+					skillData[i].color = skill_style_type[skillType]
+	--				skillData[i].category = lastHeader
+					
+					
+--					local skillDBString = DifficultyChar[skillType]..recipeID
+					
+					
+					local tools = { GetTradeSkillTools(i) }
+
+					skillData[i].tools = {}
+					
+					local slot = 1
+					for t=2,#tools,2 do
+						skillData[i].tools[slot] = (tools[t] or 0)						
+						slot = slot + 1
+					end
+					
+					local cd = GetTradeSkillCooldown(i)
+					
+					if cd then
+						skillData[i].cooldown = cd + time()		-- this is when your cooldown will be up
+				
+--						skillDBString = skillDBString.." cd=" .. cd + time()
+					end
+
+					local numTools = #tools+1
+					
+					if numTools > 1 then
+						local toolString = ""
+						local toolsAbsent = false
+						local slot = 1
+						
+						for t=2,numTools,2 do
+							if not tools[t] then
+								toolsAbsent = true
+								toolString = toolString..slot
+							end
+							
+							slot = slot + 1
+						end
+						
+						if toolsAbsent then										-- only point out missing tools
+--							skillDBString = skillDBString.." t="..toolString
+						end
+					end
+					
+--					skillDB[i] = skillDBString
+					
+					Skillet.data.skillIndexLookup[player][recipeID] = i
+					
+--[[
+					if recipeDB[recipeID] and not self.recacheRecipe[recipeID] then
+						-- presumably the data is the same, so there's not much that needs to happen here.
+						-- potentially, however, i could see an instance where a mod might feed tradeskill info and then "better" tradeskill info
+						-- might be retrieved from the server which should over-ride the earlier tradeskill info
+						-- (eg, tradeskillinfo sends skillet some data and then we learn that data was not quite up-to-date)
+
+					else
+]]
+						Skillet.data.recipeList[recipeID] = {}
+						
+						local recipe = Skillet.data.recipeList[recipeID]
+						local recipeString
+						local toolString = "-"
+						
+						recipe.tradeID = tradeID
+						recipe.spellID = recipeID
+						
+						recipe.name = skillName
+						
+						if #tools >= 1 then
+							recipe.tools = { tools[1] }
+							
+							toolString = string.gsub(tools[1]," ", "_")
+					
+							for t=3,#tools,2 do
+								table.insert(recipe.tools, tools[t])
+								toolString = toolString..":"..string.gsub(tools[t]," ", "_")
+							end
+							
+						end
+						
+						
+						local itemLink = GetTradeSkillItemLink(i)
+						
+						if not itemLink then
+							gotNil = true
+							break
+						end
+						
+						local itemString = "0"
+						
+						if GetItemInfo(itemLink) then
+							local itemID = Skillet:GetItemIDFromLink(itemLink)
+							
+							local minMade,maxMade = GetTradeSkillNumMade(i)
+						
+							recipe.itemID = itemID
+							recipe.numMade = (minMade + maxMade)/2
+							
+							if recipe.numMade > 1 then
+								itemString = itemID..":"..recipe.numMade
+							else
+								itemString = itemID
+							end
+							
+							Skillet:ItemDataAddRecipeSource(itemID,recipeID)					-- add a cross reference for the source of particular items
+						else
+							recipe.numMade = 1												
+							recipe.itemID = 0												-- indicates an enchant
+						end
+						
+						local reagentString = nil
+						
+						
+						local reagentData = {}
+		
+
+						for j=1, GetTradeSkillNumReagents(i), 1 do
+							local reagentName, _, numNeeded = GetTradeSkillReagentInfo(i,j)
+
+							local reagentID = 0
+							
+							if reagentName then
+								local reagentLink = GetTradeSkillReagentItemLink(i,j)
+
+								reagentID = Skillet:GetItemIDFromLink(reagentLink)
+							else
+								gotNil = true
+								break
+							end
+							
+							reagentData[j] = {}
+							
+							reagentData[j].id = reagentID
+							reagentData[j].numNeeded = numNeeded
+							
+--							if reagentString then
+--								reagentString = reagentString..":"..reagentID..":"..numNeeded
+--							else
+--								reagentString = reagentID..":"..numNeeded
+--							end
+							
+							Skillet:ItemDataAddUsedInRecipe(reagentID, recipeID)				-- add a cross reference for where a particular item is used
+						end
+						
+						recipe.reagentData = reagentData
+						
+						if gotNil then
+							self.recacheRecipe[recipeID] = true
+						else
+--							recipeString = tradeID.." "..itemString.." "..reagentString
+							
+--							if #tools then
+--								recipeString = recipeString.." "..toolString
+--							end
+							
+--							recipeDB[recipeID] = recipeString
+						end
+						
+--					end
+				end
+			else
+				gotNil = true
+			end
+		until true
+		
+		if gotNil and recipeID then
+			self.recacheRecipe[recipeID] = true
+		end
+	end
+	
+	
+	Skillet:RecipeGroupConstructDBString(mainGroup)
+
+DebugSpam("Scan Complete")
+	
+--	CloseTradeSkill()
+		
+	Skillet:InventoryScan()
+	Skillet:CalculateCraftableCounts()
+	Skillet:SortAndFilterRecipes()
+DebugSpam("all sorted")
+	self.scanInProgress = false
+	
+	collectgarbage("collect")
+	
+	return true
+--	AceEvent:TriggerEvent("Skillet_Scan_Complete", profession)
+end
+
 
 
 
@@ -535,6 +913,16 @@ DebugSpam("collecting tradeskill data for "..name.." "..(rank or "nil"))
 end
 
 
+
+-- this routine collects the basic data (which tradeskills a player has)
+-- clean = true means wipe the old data
+function SkilletLink:ScanPlayerTradeSkills(player, clean)	
+	local isLinked, playerLinked = IsTradeSkillLinked()
+	
+	if isLinked and player == playerLinked then
+		return true
+	end
+end
 
 
 function Skillet:EnableDataGathering(addon)
@@ -714,6 +1102,7 @@ end
 
 
 function Skillet:RescanTrade(force)
+DebugSpam("RescanTrade")
 	if not self.currentPlayer or not self.currentTrade then return end
 	
 	local dataModule = self.dataGatheringModules[self.currentPlayer]
@@ -721,6 +1110,45 @@ function Skillet:RescanTrade(force)
 	if dataModule and dataModule.RescanTrade then
 		return dataModule.RescanTrade(dataModule, force)
 	end	
+end
+
+
+
+-- Triggers a rescan of the currently selected tradeskill
+function SkilletLink:RescanTrade(force)
+
+	if not Skillet.currentPlayer or not Skillet.currentTrade then return end
+	
+	local player, tradeID = Skillet.currentPlayer, Skillet.currentTrade
+
+
+	if not Skillet.data.skillList[player] then
+		Skillet.data.skillList[player] = {}
+	end
+	
+	if not Skillet.data.skillList[player][tradeID] then
+		Skillet.data.skillList[player][tradeID]={}
+	end
+	
+
+	if force then
+DebugSpam("Forced Rescan")
+--			self.db.server.skillRanks[self.currentPlayer]={}
+		Skillet.data.skillList[player]={}
+--			self.db.server.skillDB[self.currentPlayer]={}
+--			self.db.server.groupDB = {}
+
+		Skillet:InitializeDatabase(player, true)
+	end
+
+	
+	Skillet:ScanQueuedReagents()
+
+	self:ScanTrade()
+
+	Skillet.dataScanned = true
+		
+	DebugSpam("TRADESKILL HAS BEEN SCANNED")
 end
 
 
@@ -856,7 +1284,9 @@ DebugSpam("TRADE MISMATCH for player "..(Skillet.currentPlayer or "nil").."!  ".
 	end
 	
 
-	Skillet.db.server.skillRanks[player][tradeID] = rank.." "..maxRank
+	if not IsTradeSkillLinked() then
+		Skillet.db.server.skillRanks[player][tradeID] = rank.." "..maxRank
+	end
 	
 	
 	self:ResetTradeSkillFilter()						-- verify the search filter is blank (so we get all skills)
@@ -1233,6 +1663,13 @@ end
 function SkilletData:RecipeGroupGenerateAutoGroups()
 	Skillet:RecipeGroupDeconstructDBStrings()
 end
+
+
+
+function SkilletLink:RecipeGroupGenerateAutoGroups()
+	Skillet:RecipeGroupDeconstructDBStrings()
+end
+
 
 
 -- tsi hooks
