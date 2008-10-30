@@ -1854,33 +1854,27 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 
 	local extra_text
 	local bop
-	
+
+--[[	 TODO: fix this stuff
 	if AckisRecipeList then
-	
 		if (AckisRecipeList.VendorList == nil) then
 			AckisRecipeList.VendorList = {}
 			AckisRecipeList:InitVendor()
 		end
-	
-		if not ARLProfessionTable then
-			ARLProfessionTable = ARLProfessionTableInit()
-		end
 		
-		if not AckisRecipeList.RecipeListing then 
+		if not AckisRecipeList.RecipeListing then
 			AckisRecipeList:InitializeRecipeArray()
-		
-			ARLProfessionTable[recipe.tradeID](AckisRecipeList)
 		end
-		
+	
 		if not AckisRecipeList.RecipeListing[recipe.name] then
-			ARLProfessionTable[recipe.tradeID](AckisRecipeList)
+			InitializeTradeRecipes(recipe.tradeID)	
 		end
 		
 		if AckisRecipeList.RecipeListing[recipe.name] then
 			extra_text = AckisRecipeList.RecipeListing[recipe.name]["Acquire"]
 		end
 	end
-	
+]]
 	
 	if TradeskillInfo and not extra_text then
 -- tsi uses itemIDs for skill indices instead of enchantID numbers.  for enchants, the enchantID is negated to avoid overlaps	
@@ -3166,7 +3160,7 @@ end
 
 
 
-
+--[[
 -- ackis recipe list stuff
 
 local ARLProfessionTable
@@ -3190,3 +3184,5 @@ function ARLProfessionTableInit()
 
 	return t
 end
+
+]]
