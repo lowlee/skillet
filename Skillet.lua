@@ -457,6 +457,7 @@ function Skillet:FlushAllData()
 	
 	Skillet.db.server.skillRanks = {}
 	Skillet.db.server.skillDB = {}
+	Skillet.db.server.linkDB = {}
 	Skillet.db.server.groupDB = {}
 	Skillet.db.server.queueData = {}
 	Skillet.db.server.reagentsInQueue = {}
@@ -505,7 +506,11 @@ DebugSpam("initialize database for "..player)
 		self.data.skillList = {}
 	end
 
-
+	if not self.db.server.linkDB then
+		self.db.server.linkDB = {}
+	end
+	
+	
 	if not self.data.groupList then
 		self.data.groupList = {}
 	end
@@ -641,7 +646,7 @@ function Skillet:OnEnable()
 
  	self:EnableQueue("Skillet")
 	self:EnableDataGathering("Skillet")
-
+	
 --	self:InitializeDatabase((UnitName("player")))
 	
 	AceLibrary("Waterfall-1.0"):Register("Skillet",
@@ -697,8 +702,14 @@ DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
 	
 	if (IsTradeSkillLinked()) then
 		_, self.currentPlayer = IsTradeSkillLinked()
+		if (self.currentPlayer == UnitName("player")) then
+			self.currentPlayer = "All Data"
+		end
+		
 		self:RegisterPlayerDataGathering(self.currentPlayer,SkilletLink,"sk")
 	else
+		self:InitializeAllDataLinks("All Data")
+		
 		self.currentPlayer = (UnitName("player"))
 	end
 	
@@ -1266,6 +1277,17 @@ function ProfessionPopup_SelectPlayerTrade(menuFrame,player,tradeID)
 	Skillet:SetTradeSkill(player,tradeID)
 end
 
+--|c%x+|Htrade:%d+:%d+:%d+:[0-9a-fA-F]+:[<-{]+|h%[[%a%s]+%]|h|r]]
+--	[3273] = "|cffffd000|Htrade:3274:148:150:23F381A:zD<<t=|h[First Aid]|h|r",
+
+function ProfessionPopup_SelectTradeLink(menuFrame,player,link)
+--	link = "|cffffd000|Htrade:3274:400:450:23F381A:{{{{{{|h[First Aid]|h|r"
+	ToggleDropDownMenu(1, nil, ProfessionPopupFrame, this, this:GetWidth(), 0)
+	local _,_,tradeString = string.find(link, "(trade:%d+:%d+:%d+:[0-9a-fA-F]+:[<-{]+)")
+
+	SetItemRef(tradeString,link,"LeftButton")
+end
+
 
 function ProfessionPopup_Init(menuFrame, level)
 	if (level == 1) then  -- character names
@@ -1311,7 +1333,7 @@ function ProfessionPopup_Init(menuFrame, level)
 		local skillRanks = gatherModule.ScanPlayerTradeSkills(gatherModule, UIDROPDOWNMENU_MENU_VALUE)
 		local skillButton = {}
 
-		skillButton.func = ProfessionPopup_SelectPlayerTrade
+		
 		
 		for i=1,#Skillet.tradeSkillList do
 			local tradeID = Skillet.tradeSkillList[i]
@@ -1323,10 +1345,19 @@ function ProfessionPopup_Init(menuFrame, level)
 				
 				skillButton.text = Skillet:GetTradeName(tradeID).." |cff00ff00["..(rank or "?").."/"..(maxRank or "?").."]|r"
 				skillButton.value = tradeID
-				skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
-				skillButton.arg2 = tradeID
+				
 				skillButton.icon = list.texture
 				
+				
+				if gatherModule == SkilletLink then
+					skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
+					skillButton.arg2 = Skillet.db.server.linkDB[UIDROPDOWNMENU_MENU_VALUE][tradeID]
+					skillButton.func = ProfessionPopup_SelectTradeLink
+				else
+					skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
+					skillButton.arg2 = tradeID
+					skillButton.func = ProfessionPopup_SelectPlayerTrade
+				end
 				
 				if tradeID == Skillet.currentTrade and UIDROPDOWNMENU_MENU_VALUE == Skillet.currentPlayer then
 					skillButton.checked = true

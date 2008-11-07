@@ -600,8 +600,16 @@ function Skillet:TradeButton_OnClick(button)
 					DEFAULT_CHAT_FRAME:AddMessage(link)
 				end
 			end
+		
+			if player == UnitName("player") then
+				self:SetTradeSkill(self.currentPlayer, tradeID)
+			else
+				local link = self.db.server.linkDB[player][tradeID]
+				local _,_,tradeString = string.find(link, "(trade:%d+:%d+:%d+:[0-9a-fA-F]+:[<-{]+)")
+
+				SetItemRef(tradeString,link,"LeftButton")
+			end
 			
-			self:SetTradeSkill(self.currentPlayer, tradeID)
 			button:SetChecked(1)
 		else
 			button:SetChecked(0)
@@ -650,6 +658,12 @@ function Skillet:UpdateTradeButtons(player)
 	for i=1,#tradeSkillList,1 do					-- iterate thru all skills in defined order for neatness (professions, secondary, class skills)
 		local tradeID = tradeSkillList[i]
 		local ranks = self:GetSkillRanks(player, tradeID)
+		local tradeLink
+
+		if self.db.server.linkDB[player] then
+			tradeLink = self.db.server.linkDB[player][tradeID]
+		end
+		
 		
 		if ranks then
 			local spellName, _, spellIcon = GetSpellInfo(tradeID)
@@ -661,7 +675,7 @@ function Skillet:UpdateTradeButtons(player)
 				button = CreateFrame("CheckButton", buttonName, frame, "SkilletTradeButtonTemplate")
 			end
 			
-			if player ~= UnitName("player") and (not ranks or ranks=="") then						-- fade out buttons that don't have data collected
+			if player ~= UnitName("player") and not tradeLink then						-- fade out buttons that don't have data collected
 				button:SetAlpha(.4)
 				button:SetHighlightTexture("")
 				button:SetPushedTexture("")
@@ -1619,6 +1633,7 @@ end
 
 
 local lastDetailUpdate = 0
+local lastUpdateSpellID = nil
 -- Updates the details window with information about the currently selected skill
 function Skillet:UpdateDetailsWindow(skillIndex)
 	if not skillIndex or skillIndex < 0 then
@@ -1662,7 +1677,11 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 	end
 	
 	local skill = self:GetSkill(self.currentPlayer, self.currentTrade, skillIndex)
-
+	
+	if skill.id == lastUpdateSpellID then return end
+	
+	lastUpdateSpellID = skill.id
+	
 	local recipe = skilletUnknownRecipe
 	
 	if not skill then return end
@@ -1855,26 +1874,33 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 	local extra_text
 	local bop
 
---[[	 TODO: fix this stuff
-	if AckisRecipeList then
-		if (AckisRecipeList.VendorList == nil) then
-			AckisRecipeList.VendorList = {}
-			AckisRecipeList:InitVendor()
+
+	if AckisRecipeList and AckisRecipeList.InitRecipeData then
+		local _, recipeList, mobList, trainerList = AckisRecipeList:InitRecipeData()
+		
+		local recipeData = AckisRecipeList:GetRecipeData(skill.id)
+		
+		if recipeData == nil then
+--DEFAULT_CHAT_FRAME:AddMessage("ARL Data can't find "..skill.id)
+
+			local profession = GetSpellInfo(recipe.tradeID)
+			
+--DEFAULT_CHAT_FRAME:AddMessage("ARL Data adding profession "..profession)
+			
+			AckisRecipeList:AddRecipeData(profession)
+			
+			recipeData = AckisRecipeList:GetRecipeData(skill.id)
 		end
 		
-		if not AckisRecipeList.RecipeListing then
-			AckisRecipeList:InitializeRecipeArray()
-		end
-	
-		if not AckisRecipeList.RecipeListing[recipe.name] then
-			InitializeTradeRecipes(recipe.tradeID)	
-		end
 		
-		if AckisRecipeList.RecipeListing[recipe.name] then
-			extra_text = AckisRecipeList.RecipeListing[recipe.name]["Acquire"]
+		if recipeData then
+			extra_text = AckisRecipeList:GetRecipeLocations(skill.id)
+
+--DEFAULT_CHAT_FRAME:AddMessage("ARL Data "..(extra_text or "nil"))
+
+			if extra_text == "" then extra_text = nil end
 		end
 	end
-]]
 	
 	if TradeskillInfo and not extra_text then
 -- tsi uses itemIDs for skill indices instead of enchantID numbers.  for enchants, the enchantID is negated to avoid overlaps	
@@ -3158,31 +3184,3 @@ function Skillet:TSIGetRecipeSources(recipe, opposing)
 	return number_found,res
 end
 
-
-
---[[
--- ackis recipe list stuff
-
-local ARLProfessionTable
-
-function ARLProfessionTableInit()
---DEFAULT_CHAT_FRAME:AddMessage("INIT ARL STUFF!")
-	local t = {
-		[2259] = AckisRecipeList.InitAlchemy,
-		[2018] = AckisRecipeList.InitBlackSmith,
-		[2550] = AckisRecipeList.InitCooking,
-		[4036] = AckisRecipeList.InitEngineering,
-		[3273] = AckisRecipeList.InitFirstAid,
-		[2108] = AckisRecipeList.InitLeatherWorking,
---		[2842] = AckisRecipeList.InitRoguePoison,
-		[2656] = AckisRecipeList.InitSmelting,
-		[3908] = AckisRecipeList.InitTailoring,
-		[25229] = AckisRecipeList.InitJewelcrafting,
-		[7411] = AckisRecipeList.InitEnchanting,
-		[45357] = AckisRecipeList.InitInscription,
-	}
-
-	return t
-end
-
-]]

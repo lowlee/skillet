@@ -107,8 +107,6 @@ end
 local invscan = 1
 
 function Skillet:InventoryScan(playerOverride)
-
-	
 --DEFAULT_CHAT_FRAME:AddMessage("InventoryScan "..invscan)
 invscan = invscan + 1
 	local player = playerOverride or self.currentPlayer

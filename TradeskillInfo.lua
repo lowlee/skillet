@@ -211,9 +211,9 @@ end
 function Skillet:GetTradeSkillRecipeLink(skillIndex)
 	local recipe, id = self:GetRecipeDataByTradeIndex(self.currentTrade, skillIndex)
 
-	if recipe and recipe.spellID then
--- DEFAULT_CHAT_FRAME:AddMessage(recipe.spellID or "nil")
-		local link = GetSpellLink(recipe.spellID)		
+	if recipe and id then
+--DEFAULT_CHAT_FRAME:AddMessage("get tradeskill recipe link: "..(id or "nil"))
+		local link = GetSpellLink(id)		
 		
 		return link
 	end
@@ -239,30 +239,29 @@ function Skillet:GetTradeSkillTools(skillIndex)
 end
 
 
+function Skillet:ExpandTradeSkillSubClass(skillIndex)
+end
+
 
 
 -- Gets the trade skill line, and knows how to do the right
 -- thing depending on whether or not this is a craft.
 function Skillet:GetTradeSkillLine()
-	local name, rank, maxRank = GetTradeSkillLine()
+	local tradeName = GetSpellInfo(self.currentTrade)
+	local ranks = self:GetSkillRanks(self.currentPlayer, self.currentTrade)	
 	
-	if self.currentPlayer == (UnitName("player")) then -- and self.currentTrade == name then
-		return name, rank, maxRank
-	else
-		local rankData = self.db.server.skillRanks[self.currentPlayer]
-		
-		if rankData[self.currentPlayer] then
-			return self.currentTrade, rankData[self.currentTrade].rank, rankData[self.currentTrade].maxRank
-		else
-			return "UNKNOWN", 1, 1
-		end
-	end
+	local rank, maxRank = string.split(" ",ranks)
+	
+--DEFAULT_CHAT_FRAME:AddMessage("GetTradeSkillLine "..(tradeName or "nil").." "..(rank or "nil").." "..(maxRank or "nil"))	
+
+	return tradeName, tonumber(rank), tonumber(maxRank)
 end
 
 
 -- Returns the number of trade or craft skills
 function Skillet:GetNumTradeSkills()
-    return self:GetNumSkills(self.currentTrade)
+
+    return self:GetNumSkills(self.currentPlayer, self.currentTrade)
 end
 
 function Skillet:GetTradeSkillCooldown(index)

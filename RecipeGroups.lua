@@ -168,6 +168,8 @@ end
 
 
 function Skillet:RecipeGroupAddRecipe(group, recipeID, skillIndex, noDB)
+	recipeID = tonumber(recipeID)
+	
 	if group and recipeID then
 		local currentEntry
 		
@@ -574,7 +576,7 @@ end
 function Skillet:RecipeGroupConstructDBString(group)
 --DEFAULT_CHAT_FRAME:AddMessage("constructing group db strings "..group.name)		
 
-	if group then
+	if group and not group.autoGroup then
 		local key = group.key
 		local player, tradeID, label = string.split(":",key)
 		
