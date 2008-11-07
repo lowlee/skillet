@@ -89,7 +89,6 @@ L:RegisterTranslations("koKR", function() return {
 	["Transparency"]				= "투명도",
 	["TRANSPARAENCYDESC"]				= "전문기술 창의 투명도를 조정합니다.",
 
-
 	-- New in version 1.6
 	["Shopping List"]						= "쇼핑 리스트",
 	["Retrieve"]							= "회수",
@@ -123,8 +122,20 @@ L:RegisterTranslations("koKR", function() return {
 	["ENHANCHEDRECIPEDISPLAYDESC"]					= "가능하면 제조법 이름에 제조법의 숙련도도 표시됩니다.",
 	["SHOWCRAFTCOUNTSNAME"]						= "제작 수량 보기",
 	["SHOWCRAFTCOUNTSDESC"]						= "제작 가능한 수량을 표시합니다. 총 가능한 수량은 아닙니다.",
+		
+	 -- New in version 1.11
+    ["Crafted By"]                  = "제작자",
+	
+	-- New in version 1.10-LS
+	["craftable"]					= "제작가능",
+	["No Data"]						= "데이터 없음",
+	
+	["DISPLAYSHOPPINGLISTATGUILDBANKNAME"]			= "길드은행에서 쇼핑리스트를 표시합니다.",
+    ["DISPLAYSHOPPINGLISTATGUILDBANKDESC"]			= "가방에는 없지만 제조법을 보고 제작할 때 필요한 아이템을 쇼핑리스트에 표시합니다.",
 
-    -- New in version 1.11
-    ["Crafted By"]                  = "Crafted by",
-
+	["By Item Level"]                    = "아이템레벨",
+	["By Skill Level"]                    = "숙련도",
+	
+	["Blizzard"]					= "블리자드",			-- as in, the company name
+	["Process"]						= "진행",
 } end)
