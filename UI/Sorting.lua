@@ -329,10 +329,12 @@ local function SortAndFilterRecipes()
 	local button_index = 0
 	local filtertext = Skillet:GetTradeSkillOption("filtertext")
 	local groupLabel = Skillet.currentGroupLabel
-	
+
 	if filtertext and filtertext ~= "" or groupLabel == "Flat" then
+
 		for i=1, numSkills, 1 do
 			local skill = Skillet:GetSkill(Skillet.currentPlayer, Skillet.currentTrade, i)
+
 			if skill then
 				local recipe = Skillet:GetRecipe(skill.id)
 			

@@ -427,7 +427,7 @@ end
 function Skillet:RecipeGroupSort(group, sortMethod, reverse)
 	if group then
 		for v, entry in pairs(group.entries) do
-			if entry.subGroup then
+			if entry.subGroup and entry.subGroup ~= group then
 				self:RecipeGroupSort(entry.subGroup, sortMethod, reverse)
 			end
 		end

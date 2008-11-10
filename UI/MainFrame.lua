@@ -567,12 +567,24 @@ function Skillet:TradeButton_OnEnter(button)
 	if not data or data == "" then
 		GameTooltip:AddLine(L["No Data"],1,0,0)
 	else
+		
 		local rank, maxRank = string.split(" ", data)
 		
 		GameTooltip:AddLine("["..rank.."/"..maxRank.."]",0,1,0)
 		
 		if tradeID == self.currentTrade then
 			GameTooltip:AddLine("shift-click to link")
+		end
+		
+		local buttonIcon = getglobal(button:GetName().."Icon")
+		local r,g,b = buttonIcon:GetVertexColor()
+		
+		if g == 0 then
+			GameTooltip:AddLine("scan incomplete...",1,0,0)
+		end
+		
+		if tradeID == 2656 and player ~= UnitName("player") then
+			GameTooltip:AddLine((GetSpellInfo(tradeID)).." not available for alts")
 		end
 	end
 	
@@ -662,6 +674,10 @@ function Skillet:UpdateTradeButtons(player)
 
 		if self.db.server.linkDB[player] then
 			tradeLink = self.db.server.linkDB[player][tradeID]
+			
+			if tradeID == 2656 then
+				tradeLink = nil
+			end
 		end
 		
 		
@@ -688,10 +704,18 @@ function Skillet:UpdateTradeButtons(player)
 			local buttonIcon = getglobal(buttonName.."Icon")
 			buttonIcon:SetTexture(spellIcon)
 			
+			
+			
 			position = position + button:GetWidth()
 		
 			if tradeID == self.currentTrade then
 				button:SetChecked(1)
+				
+				if Skillet.dataScanned then
+					buttonIcon:SetVertexColor(1,1,1)
+				else
+					buttonIcon:SetVertexColor(1,0,0)
+				end
 			else
 				button:SetChecked(0)
 			end
@@ -700,24 +724,6 @@ function Skillet:UpdateTradeButtons(player)
 		end
 	end
 
---DebugSpam("now hide")
-
---[[	
-	for playerAlt, data in pairs(self.db.server.skillRanks) do 				-- order doesn't matter here, so just do the ones that are known
---DebugSpam("alt: "..(playerAlt or "nil"))
-		if playerAlt ~= player then
-			for tradeID, data in pairs(data) do
-				local buttonName = "SkilletFrameTradeButton-"..playerAlt.."-"..tradeID
-				local button = getglobal(buttonName)
-				
-				if button then
-					button:SetChecked(0)
-					button:Hide()
-				end
-			end
-		end
-	end
-]]
 DebugSpam("UpdateTradeButtons complete")
 end
 

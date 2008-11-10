@@ -482,13 +482,13 @@ function SkilletLink:GetNumSkills(player, trade)
 	if (IsTradeSkillLinked()) then
 		local _, linkedPlayer = IsTradeSkillLinked()
 		
-		if linkedPlayer == player then
+--		if linkedPlayer == player then
 			local skill, rank, max = GetTradeSkillLine()
 			
 			if GetSpellInfo(trade) == skill then
 				return GetNumTradeSkills()
 			end
-		end
+--		end
 	end
 	
 	return 0
@@ -608,7 +608,9 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 	
 	local groupList = {}
 	
-	
+	local numHeaders = 0
+			
+			
 	for i = 1, numSkills, 1 do
 		repeat
 --DebugSpam("scanning index "..i)
@@ -625,6 +627,8 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 			
 			if skillName then
 				if skillType == "header" then
+					numHeaders = numHeaders + 1
+					
 					if not isExpanded then
 						ExpandTradeSkillSubClass(i)
 					end
@@ -858,6 +862,10 @@ DebugSpam("all sorted")
 	
 	collectgarbage("collect")
 	
+	if numHeaders == 0 then
+		return false
+	end
+	
 	return true
 --	AceEvent:TriggerEvent("Skillet_Scan_Complete", profession)
 end
@@ -1025,7 +1033,7 @@ function Skillet:InitializeAllDataLinks(name)
 		
 --DEFAULT_CHAT_FRAME:AddMessage("AllData Link "..tradeID.." "..(uid or "nil").." "..(spellName or "nil"))
 
-		self.db.server.linkDB[name][tradeID] = "|cffffd00|Htrade:"..tradeID..":450:450:"..(uid or "23F381A")..":"..encodedString.."|h["..spellName.."]|h|r"
+		self.db.server.linkDB[name][tradeID] = "|cffffd00|Htrade:"..tradeID..":375:450:"..(uid or "23F381A")..":"..encodedString.."|h["..spellName.."]|h|r"
 	end
 	
 	self:RegisterPlayerDataGathering(name,SkilletLink,"sk")
@@ -1137,7 +1145,10 @@ DebugSpam("AUTO RESCAN")
 		AceEvent:CancelScheduledEvent("Skillet_AutoRescan")
 	end
 
-	self:RescanTrade()
+	if not self:RescanTrade() then
+		AceEvent:ScheduleEvent("Skillet_AutoRescan", self.Skillet_AutoRescan, 0.5,self)
+	end
+	
 	
 	self:UpdateTradeSkillWindow()
 DebugSpam("AUTO RESCAN COMPLETE")
@@ -1149,12 +1160,12 @@ end
 
 
 function Skillet:TRADE_SKILL_UPDATE()
---DEFAULT_CHAT_FRAME:AddMessage("TRADE_SKILL_UPDATE "..(event or "nil"))
---	if AceEvent:IsEventScheduled("Skillet_AutoRescan") then
---		AceEvent:CancelScheduledEvent("Skillet_AutoRescan")
---	end
+--DEFAULT_CHAT_FRAME:AddMessage("TRADE_SKILL_UPDATE "..(event or "nil").." "..(arg1 or "nil"))
+	if AceEvent:IsEventScheduled("Skillet_AutoRescan") then
+		AceEvent:CancelScheduledEvent("Skillet_AutoRescan")
+	end
 	
---	AceEvent:ScheduleEvent("Skillet_AutoRescan", self.Skillet_AutoRescan, 0.5,self)
+	AceEvent:ScheduleEvent("Skillet_AutoRescan", self.Skillet_AutoRescan, 0.5,self)
 end
 
 
@@ -1251,11 +1262,11 @@ DebugSpam("Forced Rescan")
 	
 	Skillet:ScanQueuedReagents()
 
-	self:ScanTrade()
+	Skillet.dataScanned = self:ScanTrade()
 
-	Skillet.dataScanned = true
-		
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
+		
+	return Skillet.dataScanned
 end
 
 
@@ -1322,9 +1333,7 @@ DebugSpam("Forced Rescan")
 		
 		Skillet:ScanQueuedReagents()
 	
-		self:ScanTrade()
-
-		Skillet.dataScanned = true
+		Skillet.dataScanned = self:ScanTrade()
 	else				-- it's an alt, just do the inventory and craftability update stuff
 		Skillet:ScanQueuedReagents()
 		Skillet:InventoryScan()
@@ -1334,6 +1343,8 @@ DebugSpam("Forced Rescan")
 	end
 		
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
+		
+	return Skillet.dataScanned
 end
 
 
@@ -1432,7 +1443,8 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 	end
 	
 	Skillet.db.server.linkDB[player][tradeID] = GetTradeSkillListLink()
-			
+	
+	local numHeaders = 0
 			
 	for i = 1, numSkills, 1 do
 		repeat
@@ -1450,6 +1462,8 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 			
 			if skillName then
 				if skillType == "header" then
+					numHeaders = numHeaders + 1
+					
 					if not isExpanded then
 						API.ExpandLine(i)
 					end
@@ -1677,6 +1691,11 @@ DebugSpam("all sorted")
 	self.scanInProgress = false
 	
 	collectgarbage("collect")
+	
+	
+	if numHeaders == 0 then
+		return false
+	end
 	
 	return true
 --	AceEvent:TriggerEvent("Skillet_Scan_Complete", profession)
@@ -2101,9 +2120,7 @@ DebugSpam("Forced Rescan")
 		
 		Skillet:ScanQueuedReagents()
 	
-		self:ScanTrade()
-
-		Skillet.dataScanned = true
+		Skillet.dataScanned = self:ScanTrade()
 	else				-- it's an alt, just do the inventory and craftability update stuff
 		Skillet:ScanQueuedReagents()
 		Skillet:InventoryScan()
@@ -2113,6 +2130,8 @@ DebugSpam("Forced Rescan")
 	end
 		
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
+	
+	return Skillet.dataScanned
 end	
 
 

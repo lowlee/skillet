@@ -836,8 +836,8 @@ local function Skillet_rescan_bags()
 		
 	local elapsed = GetTime() - start
 	
-	if elapsed > 0.05 then
-		DEFAULT_CHAT_FRAME:AddMessage("WARNING: inventory scan took " .. math.floor(elapsed*100+.5)/100 .. " seconds to complete.")
+	if elapsed > 0.5 then
+		DEFAULT_CHAT_FRAME:AddMessage("WARNING: skillet inventory scan took " .. math.floor(elapsed*100+.5)/100 .. " seconds to complete.")
 	end
 	
 end
@@ -1339,39 +1339,41 @@ function ProfessionPopup_Init(menuFrame, level)
 			local tradeID = Skillet.tradeSkillList[i]
 			local list = Skillet:GetSkillRanks(UIDROPDOWNMENU_MENU_VALUE, tradeID)
 			
-			if list then
+			if tradeID ~= 2656 or UIDROPDOWNMENU_MENU_VALUE == UnitName("player") then
+				if list then
 
-				local rank, maxRank = string.split(" ", list)
-				
-				skillButton.text = Skillet:GetTradeName(tradeID).." |cff00ff00["..(rank or "?").."/"..(maxRank or "?").."]|r"
-				skillButton.value = tradeID
-				
-				skillButton.icon = list.texture
-				
-				
-				if gatherModule == SkilletLink then
-					skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
-					skillButton.arg2 = Skillet.db.server.linkDB[UIDROPDOWNMENU_MENU_VALUE][tradeID]
-					skillButton.func = ProfessionPopup_SelectTradeLink
-				else
-					skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
-					skillButton.arg2 = tradeID
-					skillButton.func = ProfessionPopup_SelectPlayerTrade
+					local rank, maxRank = string.split(" ", list)
+					
+					skillButton.text = Skillet:GetTradeName(tradeID).." |cff00ff00["..(rank or "?").."/"..(maxRank or "?").."]|r"
+					skillButton.value = tradeID
+					
+					skillButton.icon = list.texture
+					
+					
+					if gatherModule == SkilletLink then
+						skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
+						skillButton.arg2 = Skillet.db.server.linkDB[UIDROPDOWNMENU_MENU_VALUE][tradeID]
+						skillButton.func = ProfessionPopup_SelectTradeLink
+					else
+						skillButton.arg1 = UIDROPDOWNMENU_MENU_VALUE
+						skillButton.arg2 = tradeID
+						skillButton.func = ProfessionPopup_SelectPlayerTrade
+					end
+					
+					if tradeID == Skillet.currentTrade and UIDROPDOWNMENU_MENU_VALUE == Skillet.currentPlayer then
+						skillButton.checked = true
+					else
+						skillButton.checked = false
+					end
+					
+					if UIDROPDOWNMENU_MENU_VALUE ~= (UnitName("player")) and not list then
+						skillButton.disabled = true
+					else
+						skillButton.disabled = false
+					end
+					
+					UIDropDownMenu_AddButton(skillButton, level)
 				end
-				
-				if tradeID == Skillet.currentTrade and UIDROPDOWNMENU_MENU_VALUE == Skillet.currentPlayer then
-					skillButton.checked = true
-				else
-					skillButton.checked = false
-				end
-				
-				if UIDROPDOWNMENU_MENU_VALUE ~= (UnitName("player")) and not list then
-					skillButton.disabled = true
-				else
-					skillButton.disabled = false
-				end
-				
-				UIDropDownMenu_AddButton(skillButton, level)
 			end
 		end		
 	end
