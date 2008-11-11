@@ -1059,7 +1059,7 @@ function Skillet:EnableDataGathering(addon)
 	self:RegisterPlayerDataGathering((UnitName("player")),SkilletData, "sk")		-- make sure to add the current player as well
 	
 	
-	SkilletTSI:Enable()
+	SkilletARL:Enable()
 end
 	
 
@@ -1248,6 +1248,7 @@ function SkilletLink:RescanTrade(force)
 		Skillet.data.skillList[player][tradeID]={}
 	end
 	
+	self:RecipeGroupGenerateAutoGroups()
 
 	if force then
 DebugSpam("Forced Rescan")
@@ -1284,6 +1285,9 @@ function SkilletData:RescanTrade(force)
 	local player, tradeID = Skillet.currentPlayer, Skillet.currentTrade
 	
 --	self:InitializeDatabase(self.currentPlayer, false)
+	
+	
+	self:RecipeGroupGenerateAutoGroups()
 	
 	if player == (UnitName("player")) then			-- only allow actual skill rescans of current player data
 		if not Skillet.data.skillList[player] then
@@ -1795,379 +1799,45 @@ end
 
 
 
-function SkilletData:RecipeGroupGenerateAutoGroups()
-	Skillet:RecipeGroupDeconstructDBStrings()
-end
-
-
-
-function SkilletLink:RecipeGroupGenerateAutoGroups()
-	Skillet:RecipeGroupDeconstructDBStrings()
-end
-
-
-
--- tsi hooks
-
-
-
-SkilletTSI = {}
-
-
-
-
-local TSITradeIDs = {
-	A = 2259,           -- alchemy
-	B = 2018,           -- blacksmithing
-	D = 7411,           -- enchanting 
-	E = 4036,           -- engineering
-	J = 25229,          -- jewelcrafting
-	L = 2108,           -- leatherworking
---	2575,			-- mining (or smelting?)
-	Y = 2656,           -- smelting (from mining)
-	T = 3908,           -- tailoring
-	W = 2550,           -- cooking
-	X = 3273,           -- first aid
---	Z = 2842,           -- poisons
-}
-
-
-
-
--- this routine collects the basic data (which tradeskills a player has)
--- clean = true means wipe the old data
-function SkilletTSI:ScanPlayerTradeSkills(player, clean)
-	if not self.data then
-		self.data = {}
-	end
-
-	if not self.data.skillRanks then
-		self.data.skillRanks = {}
-		self.data.skillList = {}
-		
-		local skillRanksData = self.data.skillRanks
-DebugSpam("tsi: "..player)
-
-		for i=1,#TradeSkillList do
-
-			local id = TradeSkillList[i]
-			local name, rankName, icon = GetSpellInfo(id)			            -- always returns data
-
-			skillRanksData[id] = "1 375"
-			
-			Skillet:SetTradeSkillOption("grouping","Flat",player,id)
-			
-			self.data.skillList[id] = {}
-		end
-
-		Skillet.data.skillIndexLookup[player] = {}
-
-		local skillList = self.data.skillList
-		
-		for i in pairs(TradeskillInfo.vars.combines) do
-			local t = TradeskillInfo:GetCombineSkill(i)
-			
-			local tradeID = TSITradeIDs[t]
-DebugSpam((t or "nil") .. " = "..(tradeID or "nil"))
-			
-			if tradeID then
-				skillList[tradeID][#skillList[tradeID] + 1] = i
-			
-				Skillet.data.skillIndexLookup[player]["tsi/"..i] = #skillList[tradeID]
-			end
-		end
-	end
-	
-	return self.data.skillRanks
-end
-
-
-
-
-
--- reconstruct a recipe from a recipeString and cache it into our system for this session
-function SkilletTSI:GetRecipe(id)
-	if not id or id == 0 then return self.unknownRecipe end
-	
-	id = tonumber(id)
-	
-	if not self.data.recipeList then
-		self.data.recipeList = {}
-	end
-	
-	if id and TradeskillInfo.vars.combines[id]  then	-- should i cache it?
-		local spellID = TradeskillInfo:GetCombineEnchantId(id)
-	
-		if not self.data.recipeList[id] then
-			local found, _, skill, spec, level, components, recipe, yield, item = string.find(TradeskillInfo.vars.combines[id],"%d*|?(%u)(%l*)(%d+)|([^|]+)[|]?(%d*)[|]?([^|]*)[|]?(%d*)")
-			
-			local recipe = {}
-			
-			recipe.spellID = spellID
-			
-			recipe.name = TradeskillInfo:GetCombineName(id)
-				
---DebugSpam("name ".. recipe.name)
-		
-			recipe.tradeID = TSITradeIDs[skill]
-			
-			if id>0 then
-				recipe.itemID = tonumber(item) or id
-			else
-				recipe.itemID = 0
-			end
-			
-			recipe.numMade = tonumber(yield) or 1
-			
-			local reagentData = {}
-	--DebugSpam(recipe.name or "nil")
-
-			for s in string.gmatch(components,"%S+") do
-				local _,_,i,num = string.find(s,"(%d+):(%d+)")
-				local data = {}
-				
-				data.id = tonumber(i) or tonumber(s)
-				data.numNeeded = tonumber(num) or 1
-				
-				reagentData[#reagentData+1] = data
-			
-			end
-			
-			recipe.reagentData = reagentData
-			
-			self.data.recipeList[id] = recipe
-		end
-		
-		return self.data.recipeList[id]
-	end
-	
-	return self.unknownRecipe
-end
-
---[[
-function SkilletTSI:CollectRecipeData()
-	for recipeID, recipeString in pairs(self.db.account.recipeDB) do
-
-		local tradeID, itemString, reagentString, toolString = string.split(" ",recipeString)
-		local itemID, numMade = 0, 1
-		local slot = nil
-		
-		if itemString ~= "0" then
-			local a, b = string.split(":",itemString)
-			
-			if a ~= "0" then 
-				itemID, numMade = a,b
-			else
-				itemID = 0
-				numMade = 1
-				slot = tonumber(b)
-			end
-			
-			if not numMade then
-				numMade = 1
-			end
-		end
-		
-		itemID = tonumber(itemID)
-		
-		if itemID ~= 0 then
-			self:ItemDataAddRecipeSource(itemID, recipeID)
-		end
-		
-
-		local reagentList = { string.split(":",reagentString) }
-		local numReagents = #reagentList / 2
-		
-		for i=1,numReagents do
-			local reagentID = tonumber(reagentList[1 + (i-1)*2])
-			
-			self:ItemDataAddUsedInRecipe(reagentID, recipeID)
-		end
-	end
-	
-	
-	for player,tradeList in pairs(self.db.server.skillDB) do
-		self.data.skillIndexLookup[player] = {}
-		
-		for trade,skillList in pairs(tradeList) do
-			for i=1,#skillList do
---				local skillData = self:GetSkill(player, trade, i)
-				local skillString = self.db.server.skillDB[player][trade][i]
-
-				local data = { string.split(" ",skillString) }
-				
-				if data[1] ~= "header" then
-					local recipeID = string.sub(data[1],2)
-				
-					self.data.skillIndexLookup[player][recipeID] = i
-				end
-			end
-		end
-	end
-]]
-
--- reconstruct a skill from a skillString and cache it into our system for this session
-function SkilletTSI:GetSkill(player,trade,index)
-	if player and trade and index then
-		
-		if not Skillet.data.skillList[player] then
-			Skillet.data.skillList[player] = {}
-		end
-		
-		if not Skillet.data.skillList[player][trade] then
-			Skillet.data.skillList[player][trade] = {}
-		end
-		
-		if not Skillet.data.skillList[player][trade][index] then
-			local skill = {}
-
---DebugSpam("new skill ".. index)
-	
-			local skillList = self.data.skillList[trade]
-			
-			local difficulty = "o" -- string.sub(data[1],1,1)
-			local recipeID = skillList[index]
-			
-		
-			
---DebugSpam("recipe ".. (recipeID or "nil"))
-
-
-
-			skill.id = (recipeID or 0)
-			skill.difficulty = DifficultyText[difficulty]
-			skill.color = skill_style_type[DifficultyText[difficulty]]
-			skill.tools = nil
-			
-				
-			Skillet.data.skillList[player][trade][index] = skill
-		end
-		
-		return Skillet.data.skillList[player][trade][index]
-	end
-	
-DebugSpam("can't find skill "..player.." "..(trade or "nil").." "..(index or "nil"))
-end
-
-
-function SkilletTSI:GetSkillRanks(player, trade)
-	return self.data.skillRanks[trade]
-end
-
-
-function SkilletTSI:GetNumSkills(player, trade)
-	return #self.data.skillList[trade]
-end
-
-	
-function SkilletTSI:GetRecipeName(id)
-	return TradeskillInfo:GetCombineName(id), TradeskillInfo:GetCombineEnchantId(id)
-end
-	
-	
-function SkilletTSI:RescanTrade(force)
-	if not Skillet.currentPlayer or not Skillet.currentTrade then return end
-	
-	local player, tradeID = Skillet.currentPlayer, Skillet.currentTrade
-	
-	self:RecipeGroupGenerateAutoGroups()
-	
-	if player == (UnitName("player")) then			-- only allow actual skill rescans of current player data
-		if not Skillet.data.skillList[player] then
-			Skillet.data.skillList[player] = {}
-		end
-		
-		if not Skillet.data.skillList[player][tradeID] then
-			Skillet.data.skillList[player][tradeID]={}
-		end
-		
-					
-		if not Skillet.db.server.skillDB[player] then
-			Skillet.db.server.skillDB[player] = {}
-		end
-	
-		if not Skillet.db.server.skillDB[player][tradeID] then
-			Skillet.db.server.skillDB[player][tradeID] = {}
-		end
-		
-		if force then
-DebugSpam("Forced Rescan")
---			self.db.server.skillRanks[self.currentPlayer]={}
-			Skillet.data.skillList[player]={}
---			self.db.server.skillDB[self.currentPlayer]={}
---			self.db.server.groupDB = {}
-
-			Skillet:InitializeDatabase(player, true)
-			
-			local firstSkill
-			
-			for id,list in pairs(Skillet.db.server.skillRanks[player]) do
-				if not firstSkill then
-					firstSkill = id
-				end
-				
-				Skillet.data.skillList[player][id] = {}
-				Skillet.db.server.skillDB[player][id] = {}
-			end
-            
-			Skillet.data.skillIndexLookup[player] = {}
-				
-			if not Skillet.db.server.skillRanks[player] then
-				Skillet.currentTrade = firstSkill
-			end
-		end
-
-		
-		Skillet:ScanQueuedReagents()
-	
-		Skillet.dataScanned = self:ScanTrade()
-	else				-- it's an alt, just do the inventory and craftability update stuff
-		Skillet:ScanQueuedReagents()
-		Skillet:InventoryScan()
-		Skillet:CalculateCraftableCounts()
-		
-		Skillet.dataScanned = true
-	end
-		
-	DebugSpam("TRADESKILL HAS BEEN SCANNED")
-	
-	return Skillet.dataScanned
-end	
-
-
-function SkilletTSI:RecipeGroupGenerateAutoGroups()
+function Skillet:GenerateAltKnowledgeBase()
 	local tradeID = Skillet.currentTrade
 	local player = Skillet.currentPlayer
 	
 	local knownRecipes = {}
 	local unknownRecipes = {}
-	
+
 	for label in pairs(Skillet.dataGatheringModules) do
 		local rankString = Skillet:GetSkillRanks(label, tradeID)
 	
-		if label ~= "tsiData" and rankString then
+		if label ~= "All Data" and rankString then
+
 			Skillet:InitGroupList(player, tradeID, label, true)
 			
 			if label == Skillet.currentGroupLabel then
 				
 				local mainGroup =  Skillet:RecipeGroupNew(player, tradeID, label)
 				
-			
 				
 				if not mainGroup.initialized then
+					local unknownCount = 0
+					local knownCount = 0
+					
 					mainGroup.initialized = true
 					
 					local rank = string.split(" ", rankString)
 					
 					rank = tonumber(rank)
 					
-					-- first, accumulate all tsiData
+					-- first, accumulate all skill data
 					for id, skill in pairs(Skillet.data.skillList[player][tradeID]) do
 						local recipeID = skill.id
+
+						if skill.id then
+							spellID = skill.id
 						
-						local spellID = TradeskillInfo:GetCombineEnchantId(tonumber(recipeID))
-						
-						unknownRecipes[spellID] = skill.id
+							unknownRecipes[spellID] = spellID
+							unknownCount = unknownCount + 1
+						end
 					end
 
 
@@ -2177,42 +1847,51 @@ function SkilletTSI:RecipeGroupGenerateAutoGroups()
 					for i=1, numSkills do
 						local skill = Skillet:GetSkill(label, tradeID, i)
 						if skill and skill.id ~= 0 then
-							local recipe = Skillet:GetRecipe(skill.id)
+							local spellID = skill.id
+							
+							knownRecipes[spellID] = spellID
+							unknownRecipes[spellID] = nil
+							
+							unknownCount = unknownCount - 1
+							knownCount = knownCount + 1
+						end
+					end
+					
+				
+					if knownCount > 0 then 
+						local knownGroup = Skillet:RecipeGroupNew(player, tradeID, label, "Known Recipes")
 						
-							knownRecipes[recipe.spellID] = unknownRecipes[recipe.spellID]
-							unknownRecipes[recipe.spellID] = nil
+						Skillet:RecipeGroupAddSubGroup(mainGroup, knownGroup, 1)
+						
+						for spellID,recipeID in pairs(knownRecipes) do
+							local index = Skillet.data.skillIndexLookup[player][recipeID]
+				
+							local entry = Skillet:RecipeGroupAddRecipe(knownGroup, recipeID, index)
+							
+							entry.color = Skillet:GetTradeSkillLevelColor(spellID, rank)
+							
+							if entry.color then
+								entry.difficulty = entry.color.level
+							end
 						end
 					end
 					
 					
-					local knownGroup = Skillet:RecipeGroupNew(player, tradeID, label, "Known Recipes")
-					local unknownGroup = Skillet:RecipeGroupNew(player, tradeID, label, "Unknown Recipes")
-				
-					Skillet:RecipeGroupAddSubGroup(mainGroup, knownGroup, 1)
-					Skillet:RecipeGroupAddSubGroup(mainGroup, unknownGroup, 2)
-					
-					
-					for spellID,recipeID in pairs(unknownRecipes) do
-						local index = Skillet.data.skillIndexLookup[player][recipeID]
-					
-						local entry = Skillet:RecipeGroupAddRecipe(unknownGroup, recipeID, index)
+					if unknownCount > 0 then
+						local unknownGroup = Skillet:RecipeGroupNew(player, tradeID, label, "Unknown Recipes")
 						
-						entry.color = Skillet:GetTradeSkillLevelColor(spellID, rank)
+						Skillet:RecipeGroupAddSubGroup(mainGroup, unknownGroup, 2)
 						
-						if entry.color then
-							entry.difficulty = entry.color.level
-						end
-					end
-				
-					for spellID,recipeID in pairs(knownRecipes) do
-						local index = Skillet.data.skillIndexLookup[player][recipeID]
---DEFAULT_CHAT_FRAME:AddMessage("adding "..recipeID.." "..(index or "nil"))					
-						local entry = Skillet:RecipeGroupAddRecipe(knownGroup, recipeID, index)
+						for spellID,recipeID in pairs(unknownRecipes) do
+							local index = Skillet.data.skillIndexLookup[player][recipeID]
 						
-						entry.color = Skillet:GetTradeSkillLevelColor(spellID, rank)
-						
-						if entry.color then
-							entry.difficulty = entry.color.level
+							local entry = Skillet:RecipeGroupAddRecipe(unknownGroup, recipeID, index)
+							
+							entry.color = Skillet:GetTradeSkillLevelColor(spellID, rank)
+							
+							if entry.color then
+								entry.difficulty = entry.color.level
+							end
 						end
 					end
 				end
@@ -2228,118 +1907,25 @@ function SkilletTSI:RecipeGroupGenerateAutoGroups()
 end
 
 
---[[
-<CheckButton name="SkilletInvFilterButtonTemplate" virtual="true">
-		<Size>
-			<AbsDimension x="20" y="20"/>
-		</Size>
-		
-		<CheckedTexture name="$parentChecked" alphaMode="ADD" file="Interface\Addons\Skillet\Icons\highlight.tga"/>
+function SkilletData:RecipeGroupGenerateAutoGroups()
+--	Skillet:RecipeGroupDeconstructDBStrings()
+	Skillet:GenerateAltKnowledgeBase()
+end
 
-		<HighlightTexture alphaMode="ADD" file="Interface\Buttons\ButtonHilight-Square"/>
-		
-		<Scripts>
-			<OnLoad>
-				this:SetFrameLevel(this:GetFrameLevel()+5)
-			</OnLoad>
-			<OnLeave>
-				Skillet:InventoryFilterButton_OnLeave(this)
-			</OnLeave>
-			<OnEnter>
-				Skillet:InventoryFilterButton_OnEnter(this)
-			</OnEnter>
-			<OnClick>
-				Skillet:InventoryFilterButton_OnClick(this)
-			</OnClick>
-			<OnShow>
-				Skillet:InventoryFilterButton_OnShow(this)
-			</OnShow>
-		</Scripts>
-	</CheckButton>
 
-			<CheckButton name="SkilletHideUncraftableRecipes" hidden="false">
-				
-				</Layers>
-				
-				<Scripts>
-					<OnShow>
-						local hideUncraftable = Skillet:GetTradeSkillOption("hideuncraftable")
-						
-						if hideUncraftable then
-							this:SetChecked(1)
-						else
-							this:SetChecked(0)
-						end
-					</OnShow>
-					<OnLoad>
-						this:RegisterForClicks("LeftButtonUp","RightButtonUp")
-					</OnLoad>
-					<OnClick>
-						if arg1=="LeftButton" then
-							Skillet:InventoryFilterButtons_Hide()	
-							if this:GetChecked() then
-								PlaySound("igMainMenuOptionCheckBoxOn");
-							end
-							local before = Skillet:GetTradeSkillOption("hideuncraftable")
-							Skillet:SetTradeSkillOption("hideuncraftable", not before)
-							Skillet:SortAndFilterRecipes()
-							Skillet:UpdateTradeSkillWindow()
-						else
-							if SkilletInventoryFilterBag:IsVisible() then
-								Skillet:InventoryFilterButtons_Hide()
-							else
-								Skillet:InventoryFilterButtons_Show()
-							end
-							
-							if Skillet:GetTradeSkillOption("hideuncraftable") then
-								this:SetChecked(1)
-							else
-								this:SetChecked(0)
-							end
-						end
-						
-					</OnClick>
-	
-					<OnEnter>
-						GameTooltip:SetOwner(this, "ANCHOR_TOPLEFT")
-						GameTooltip:SetText(CRAFT_IS_MAKEABLE_TOOLTIP, nil, nil, nil, nil, 1)
-						GameTooltip:AddLine("Left-Click to toggle")
-						GameTooltip:AddLine("Right-Click for filtering options")
-						GameTooltip:Show()
-					</OnEnter>
-					<OnLeave>
-						GameTooltip:Hide()
-					</OnLeave>
-				</Scripts>
-			</CheckButton>
 
-			
-			<!--
-				inventory filter selector
-			-->
-			
-			
-			<CheckButton name="SkilletInventoryFilterBag" inherits="SkilletInvFilterButtonTemplate" hidden="true">
-				<Anchors>
-					<Anchor point="TOPLEFT" relativeTo="SkilletHideUncraftableRecipes" relativePoint="BOTTOMLEFT">
-						<Offset>
-							<AbsDimension x="-30" y="0"/>
-						</Offset>
-					</Anchor>
-				</Anchors>
-				
-				<NormalTexture name="$parentIcon" file="Interface\Addons\Skillet\Icons\backpack_icon.tga"/>
-				
-				<Scripts>
-					<OnLoad>
-						this:SetFrameLevel(this:GetFrameLevel()+5)
-						this.slot = "bag"
-						getglobal(this:GetName().."Checked"):SetGradient("vertical",1,1,.5, 1,1,.5)
-					</OnLoad>
-				</Scripts>
-			</CheckButton>
-]]			
-			
+function SkilletLink:RecipeGroupGenerateAutoGroups()
+--	Skillet:RecipeGroupDeconstructDBStrings()
+	Skillet:GenerateAltKnowledgeBase()
+end
+
+
+
+-- arl hooks
+
+
+
+SkilletARL = {}
 
 			
 local function initFilterButton(name, icon, parent, slot)
@@ -2356,10 +1942,10 @@ local function initFilterButton(name, icon, parent, slot)
 	
 	b:SetFrameLevel(this:GetFrameLevel()+5)
 	
-	b:SetScript("OnEnter", function(button) SkilletTSI:RecipeFilterButton_OnEnter(button) end)
-	b:SetScript("OnLeave", function(button) SkilletTSI:RecipeFilterButton_OnLeave(button) end)
-	b:SetScript("OnClick", function(button) SkilletTSI:RecipeFilterButton_OnClick(button) end)
-	b:SetScript("OnShow", function(button) SkilletTSI:RecipeFilterButton_OnShow(button) end)
+	b:SetScript("OnEnter", function(button) SkilletARL:RecipeFilterButton_OnEnter(button) end)
+	b:SetScript("OnLeave", function(button) SkilletARL:RecipeFilterButton_OnLeave(button) end)
+	b:SetScript("OnClick", function(button) SkilletARL:RecipeFilterButton_OnClick(button) end)
+	b:SetScript("OnShow", function(button) SkilletARL:RecipeFilterButton_OnShow(button) end)
 	
 	b.slot = slot
 	
@@ -2368,34 +1954,35 @@ end
 
 
 
-function SkilletTSI:RecipeFilterButtons_Hide()
-	local b = self.tsiRecipeSourceButton
+function SkilletARL:RecipeFilterButtons_Hide()
+	local b = self.arlRecipeSourceButton
 	
 	if b then
 		b.trainerButton:Hide()
 		b.vendorButton:Hide()
 		b.questButton:Hide()
 		b.dropButton:Hide()
+		b.mobButton:Hide()
+		b.unknownButton:Hide()
 	end
 end
 
 
-
-function SkilletTSI:RecipeFilterButtons_Show()
-	local b = self.tsiRecipeSourceButton
+function SkilletARL:RecipeFilterButtons_Show()
+	local b = self.arlRecipeSourceButton
 	
 	if b then
 		b.trainerButton:Show()
 		b.vendorButton:Show()
 		b.questButton:Show()
 		b.dropButton:Show()
+		b.mobButton:Show()
+		b.unknownButton:Show()
 	end
 end
 
 
-
-
-function SkilletTSI:RecipeFilterButton_OnClick(button)
+function SkilletARL:RecipeFilterButton_OnClick(button)
 	local slot = button.slot or ""
 	local option = "recipeSourceFilter-"..slot
 	
@@ -2408,7 +1995,7 @@ function SkilletTSI:RecipeFilterButton_OnClick(button)
 end
 
 
-function SkilletTSI:RecipeFilterButton_OnEnter(button)
+function SkilletARL:RecipeFilterButton_OnEnter(button)
 	local slot = button.slot or ""
 	local option = "recipeSourceFilter-"..slot
 	local value = Skillet:GetTradeSkillOption(option)
@@ -2426,11 +2013,11 @@ function SkilletTSI:RecipeFilterButton_OnEnter(button)
 end
 
 
-function SkilletTSI:RecipeFilterButton_OnLeave(button)
+function SkilletARL:RecipeFilterButton_OnLeave(button)
 	GameTooltip:Hide()
 end
 
-function SkilletTSI:RecipeFilterButton_OnShow(button)
+function SkilletARL:RecipeFilterButton_OnShow(button)
 	local slot = button.slot or ""
 	local option = "recipeSourceFilter-"..slot
 	
@@ -2444,7 +2031,7 @@ function SkilletTSI:RecipeFilterButton_OnShow(button)
 end
 
 
-function SkilletTSI:RecipeFilterToggleButton_OnShow(button)
+function SkilletARL:RecipeFilterToggleButton_OnShow(button)
 	local filter = Skillet:GetTradeSkillOption("recipeSourceFilter")
 
 	if filter then
@@ -2455,7 +2042,7 @@ function SkilletTSI:RecipeFilterToggleButton_OnShow(button)
 end
 
 
-function SkilletTSI:RecipeFilterToggleButton_OnEnter(button)
+function SkilletARL:RecipeFilterToggleButton_OnEnter(button)
 	GameTooltip:SetOwner(button, "ANCHOR_TOPLEFT")
 
 	GameTooltip:SetText("Filter recipes by source", nil, nil, nil, nil, 1)
@@ -2467,15 +2054,15 @@ function SkilletTSI:RecipeFilterToggleButton_OnEnter(button)
 end
 
 
-function SkilletTSI:RecipeFilterToggleButton_OnLeave(button)
+function SkilletARL:RecipeFilterToggleButton_OnLeave(button)
 	GameTooltip:Hide()
 end
 
 
 
-function SkilletTSI:RecipeFilterToggleButton_OnClick(button, mouse)
+function SkilletARL:RecipeFilterToggleButton_OnClick(button, mouse)
 	if mouse=="LeftButton" then
-		SkilletTSI:RecipeFilterButtons_Hide()	
+		SkilletARL:RecipeFilterButtons_Hide()	
 		if button:GetChecked() then
 			PlaySound("igMainMenuOptionCheckBoxOn");
 		end
@@ -2484,10 +2071,10 @@ function SkilletTSI:RecipeFilterToggleButton_OnClick(button, mouse)
 		Skillet:SortAndFilterRecipes()
 		Skillet:UpdateTradeSkillWindow()
 	else
-		if TSIRecipeSourceTrainerButton:IsVisible() then
-			SkilletTSI:RecipeFilterButtons_Hide()
+		if ARLRecipeSourceTrainerButton:IsVisible() then
+			SkilletARL:RecipeFilterButtons_Hide()
 		else
-			SkilletTSI:RecipeFilterButtons_Show()
+			SkilletARL:RecipeFilterButtons_Show()
 		end
 		
 		if Skillet:GetTradeSkillOption("recipeSourceFilter") then
@@ -2500,10 +2087,10 @@ end
 
 
 
-function SkilletTSI:RecipeSourceButtonInit()
-	if not self.tsiRecipeSourceButton then
+function SkilletARL:RecipeSourceButtonInit()
+	if not self.arlRecipeSourceButton then
 
-		local b = CreateFrame("CheckButton", "TSIRecipeSourceFilterButton")
+		local b = CreateFrame("CheckButton", "ARLRecipeSourceFilterButton")
 		
 		b:SetWidth(20)
 		b:SetHeight(20)
@@ -2515,76 +2102,100 @@ function SkilletTSI:RecipeSourceButtonInit()
 		b:SetDisabledTexture("Interface\\Icons\\INV_Scroll_03")
 		b:RegisterForClicks("LeftButtonUp", "RightButtonDown")
 		
-		self.tsiRecipeSourceButton = b
+		self.arlRecipeSourceButton = b
 		
-		b:SetScript("OnClick", function(button) SkilletTSI:RecipeFilterToggleButton_OnClick(button, arg1) end)
-		b:SetScript("OnEnter", function(button) SkilletTSI:RecipeFilterToggleButton_OnEnter(button) end)
-		b:SetScript("OnLeave", function(button) SkilletTSI:RecipeFilterToggleButton_OnLeave(button) end)
-		b:SetScript("OnShow", function(button) SkilletTSI:RecipeFilterToggleButton_OnShow(button) end)
+		b:SetScript("OnClick", function(button) SkilletARL:RecipeFilterToggleButton_OnClick(button, arg1) end)
+		b:SetScript("OnEnter", function(button) SkilletARL:RecipeFilterToggleButton_OnEnter(button) end)
+		b:SetScript("OnLeave", function(button) SkilletARL:RecipeFilterToggleButton_OnLeave(button) end)
+		b:SetScript("OnShow", function(button) SkilletARL:RecipeFilterToggleButton_OnShow(button) end)
 		
-		b.trainerButton = initFilterButton("TSIRecipeSourceTrainerButton", "Interface\\Addons\\Skillet\\Icons\\vendor_icon.tga", b, "trainer")
-		b.trainerButton:SetPoint("TOP", b:GetName(), "BOTTOM", -30,0)
+		b.trainerButton = initFilterButton("ARLRecipeSourceTrainerButton", "Interface\\Addons\\Skillet\\Icons\\vendor_icon.tga", b, "trainer")
+		b.trainerButton:SetPoint("TOP", b:GetName(), "BOTTOM", -50,0)
 	
 		
-		b.vendorButton = initFilterButton("TSIRecipeSourceVendorButton", "Interface\\Addons\\Skillet\\Icons\\vendor_icon.tga", b, "vendor")
-		b.vendorButton:SetPoint("LEFT", "TSIRecipeSourceTrainerButton", "RIGHT", 0,0)
+		b.vendorButton = initFilterButton("ARLRecipeSourceVendorButton", "Interface\\Addons\\Skillet\\Icons\\vendor_icon.tga", b, "vendor")
+		b.vendorButton:SetPoint("LEFT", "ARLRecipeSourceTrainerButton", "RIGHT", 0,0)
 	
 		
-		b.questButton = initFilterButton("TSIRecipeSourceQuestButton", "Interface\\Icons\\INV_Misc_Map_01", b, "quest")
-		b.questButton:SetPoint("LEFT", "TSIRecipeSourceVendorButton", "RIGHT", 0,0)
+		b.questButton = initFilterButton("ARLRecipeSourceQuestButton", "Interface\\Icons\\INV_Misc_Map_01", b, "quest")
+		b.questButton:SetPoint("LEFT", "ARLRecipeSourceVendorButton", "RIGHT", 0,0)
 
 		
-		b.dropButton = initFilterButton("TSIRecipeSourceQuestButton", "Interface\\Icons\\Ability_DualWield", b, "drop")
-		b.dropButton:SetPoint("LEFT", "TSIRecipeSourceQuestButton", "RIGHT", 0,0)
+		b.dropButton = initFilterButton("ARLRecipeSourceDropButton", "Interface\\Icons\\Ability_DualWield", b, "drop")
+		b.dropButton:SetPoint("LEFT", "ARLRecipeSourceQuestButton", "RIGHT", 0,0)
+		
+		
+		b.mobButton = initFilterButton("ARLRecipeSourceMobButton", "Interface\\Icons\\INV_Scroll_06", b, "mob")
+		b.mobButton:SetPoint("LEFT", "ARLRecipeSourceDropButton", "RIGHT", 0,0)
+		
+		b.unknownButton = initFilterButton("ARLRecipeSourceUnknownButton", "Interface\\Icons\\INV_Misc_QuestionMark", b, "unknown")
+		b.unknownButton:SetPoint("LEFT", "ARLRecipeSourceMobButton", "RIGHT", 0,0)
 	end
 	
 	local _,_,icon = GetSpellInfo(Skillet.currentTrade)
 	
 	if icon then
-		self.tsiRecipeSourceButton.trainerButton:SetNormalTexture(icon)
+		self.arlRecipeSourceButton.trainerButton:SetNormalTexture(icon)
 	end
 	
 	self:RecipeFilterButtons_Hide()
 	
-	return self.tsiRecipeSourceButton
+	return self.arlRecipeSourceButton
 end
 
 
+	
+local ARLProfessionInitialized = {}
 
-function SkilletTSI:RecipeFilterOperator(skillIndex)
+-- return true if the skill needs to be filtered out
+function SkilletARL:RecipeFilterOperator(skillIndex)
 	if Skillet:GetTradeSkillOption("recipeSourceFilter") then	
 		local skill = Skillet:GetSkill(Skillet.currentPlayer, Skillet.currentTrade, skillIndex)
-		local recipe = Skillet:GetRecipe(skill.id)
 		
-		local combineID = recipe.itemID
-
-		if combineID == 0 and recipe.spellID then
-			combineID = -recipe.spellID
-		elseif combineID then
-			combineID = TradeskillInfo:MakeSpecialCase(combineID, recipe.name)
+		local _, recipeList, mobList, trainerList = AckisRecipeList:InitRecipeData()
+		
+		recipeData = AckisRecipeList:GetRecipeData(skill.id)
+		
+		if recipeData == nil and not ARLProfessionInitialized[Skillet.currentTrade] then
+			local profession = GetSpellInfo(Skillet.currentTrade)
+			
+			AckisRecipeList:AddRecipeData(profession)
+			ARLProfessionInitialized[Skillet.currentTrade] = true
+			 
+			recipeData = AckisRecipeList:GetRecipeData(skill.id)
 		end
 		
-		if combineID then
-			local recipeID = TradeskillInfo:GetCombineRecipe(combineID)
-			local found, _, sources = string.find(TradeskillInfo.vars.recipes[recipeID] or "","[^|]+|(%w+)[|]?(%d*)[|]?(%d*)")
-			
-			if string.find(sources or "","D") and Skillet:GetTradeSkillOption("recipeSourceFilter-drop") then
-				return false
-			end
-			
-			if string.find(sources or "","V") and Skillet:GetTradeSkillOption("recipeSourceFilter-vendor") then
-				return false
-			end
-			
-			if string.find(sources or "","Q") and Skillet:GetTradeSkillOption("recipeSourceFilter-quest") then
-				return false
-			end
 		
-			if not found and Skillet:GetTradeSkillOption("recipeSourceFilter-trainer") then
+		if recipeData then
+			recipeSource = recipeData["Acquire"]
+			
+			for i,data in pairs(recipeSource) do
+				if data["Type"] == 1 and Skillet:GetTradeSkillOption("recipeSourceFilter-trainer") then
+					return false
+				end
+				
+				if data["Type"] == 2 and Skillet:GetTradeSkillOption("recipeSourceFilter-vendor") then
+					return false
+				end
+				
+				if data["Type"] == 3 and Skillet:GetTradeSkillOption("recipeSourceFilter-mob") then
+					return false
+				end
+				
+				if data["Type"] == 4 and Skillet:GetTradeSkillOption("recipeSourceFilter-quest") then
+					return false
+				end
+				
+				if data["Type"] == 5 and Skillet:GetTradeSkillOption("recipeSourceFilter-drop") then
+					return false
+				end
+			end
+		else
+			if Skillet:GetTradeSkillOption("recipeSourceFilter-unknown") then
 				return false
-			end	
+			end
 		end
-
+		
 		return true
 	end
 	
@@ -2592,22 +2203,18 @@ function SkilletTSI:RecipeFilterOperator(skillIndex)
 end
 
 
-function SkilletTSI:Enable()
+function SkilletARL:Enable()
 	
-	if TradeskillInfo then
-		Skillet:RegisterRecipeDatabase("tsi",SkilletTSI)
-		Skillet:RegisterPlayerDataGathering("tsiData",SkilletTSI,"tsi")
-		
---		SkilletTSI:RecipeSourceButtonInit()
-	
-		Skillet:RegisterRecipeFilter("tsiRecipeSource", self, self.RecipeSourceButtonInit, self.RecipeFilterOperator)
-				
+	if AckisRecipeList then
+		Skillet:RegisterRecipeFilter("arlRecipeSource", self, self.RecipeSourceButtonInit, self.RecipeFilterOperator)
 				
 		Skillet.defaultOptions["recipeSourceFilter"] = false
 		Skillet.defaultOptions["recipeSourceFilter-drop"] = true
 		Skillet.defaultOptions["recipeSourceFilter-vendor"] = true
 		Skillet.defaultOptions["recipeSourceFilter-trainer"] = true
 		Skillet.defaultOptions["recipeSourceFilter-quest"] = true
+		Skillet.defaultOptions["recipeSourceFilter-mob"] = true
+		Skillet.defaultOptions["recipeSourceFilter-unknown"] = true
 	end
 end
 
