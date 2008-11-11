@@ -1248,8 +1248,6 @@ function SkilletLink:RescanTrade(force)
 		Skillet.data.skillList[player][tradeID]={}
 	end
 	
-	self:RecipeGroupGenerateAutoGroups()
-
 	if force then
 DebugSpam("Forced Rescan")
 --			self.db.server.skillRanks[self.currentPlayer]={}
@@ -1266,7 +1264,10 @@ DebugSpam("Forced Rescan")
 	Skillet.dataScanned = self:ScanTrade()
 
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
-		
+	
+	
+	self:RecipeGroupGenerateAutoGroups()
+
 	return Skillet.dataScanned
 end
 
@@ -1286,8 +1287,6 @@ function SkilletData:RescanTrade(force)
 	
 --	self:InitializeDatabase(self.currentPlayer, false)
 	
-	
-	self:RecipeGroupGenerateAutoGroups()
 	
 	if player == (UnitName("player")) then			-- only allow actual skill rescans of current player data
 		if not Skillet.data.skillList[player] then
@@ -1345,7 +1344,11 @@ DebugSpam("Forced Rescan")
 		
 		Skillet.dataScanned = true
 	end
-		
+	
+	
+	self:RecipeGroupGenerateAutoGroups()
+	
+	
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
 		
 	return Skillet.dataScanned
