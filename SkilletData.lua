@@ -41,6 +41,7 @@ local TradeSkillList = {
 	3273,           -- first aid
 --	2842,           -- poisons
 
+	53428,			-- runeforging
 	
 --	5149, 			-- beast training (not supported, but i need to know the number)... err... or maybe i don't
 }
@@ -90,6 +91,10 @@ local TradeSkillRecipeList = {
 	[2259] =
 --	{ 2259,3101,3464,11611,28596,28677,28675,28672,51304 },
 	{ 2259,2330,2329,3101,3171,3172,3173,3174,3176,3177,2333,3188,3170,3230,3447,3448,3449,3450,3451,3452,3453,3454,3464,4508,4942,6624,6618,6617,7179,7181,7183,7257,7258,7255,7259,7256,7836,7837,7841,7845,8240,11449,11450,11451,11448,11452,11453,11456,11457,11458,11459,11460,11461,11464,11465,11466,11467,11468,11472,11473,11476,11477,11478,11479,11480,11611,12609,15833,17187,17551,17552,17553,17554,17555,17556,17557,17559,17561,17566,17560,17563,17562,17564,17565,17570,17571,17572,17573,17574,17575,17576,17577,17578,17579,17580,17632,17634,17635,17636,17637,17638,3175,21923,22732,22808,24266,24365,24366,24367,24368,25146,26277,28596,28543,28544,28545,28546,28549,28550,28552,28551,28553,28554,28555,28556,28557,28558,28562,28563,28564,28565,28566,28567,28568,28569,28570,28575,28571,28572,28577,28573,28576,28578,28579,28585,28583,28584,28582,28580,28581,28586,28590,28587,28588,28589,28591,28677,28675,28672,29688,32765,32766,33732,33738,33740,33733,33741,38070,38960,38962,38961,39636,39637,39638,39639,41458,41500,41501,41502,41503,42736,45061,47050,47046,47049,47048,51304,53812,53836,53837,53838,53840,53842,53847,53895,53898,53900,53905,53904,53903,53902,53901,53899,53848,53841,53839,53777,53776,53781,53782,53775,53774,53773,53771,53779,53780,53783,53784,53942,53936,53937,53938,53939,54020,54213,54218,54220,54221,54222,53042,56519,57425,57427,58868,58871,60403,60396,60405,60354,60355,60356,60357,60365,60366,60367,60350,60893,2331,2332,2334,2335,2336,2337 },
+
+	
+	[53428] = 
+	{ },	
 }
 
 
@@ -207,14 +212,15 @@ function Skillet:CollectRecipeInformation()
 			self:ItemDataAddRecipeSource(itemID, recipeID)
 		end
 		
-
-		local reagentList = { string.split(":",reagentString) }
-		local numReagents = #reagentList / 2
-		
-		for i=1,numReagents do
-			local reagentID = tonumber(reagentList[1 + (i-1)*2])
+		if reagengString ~= "-" then
+			local reagentList = { string.split(":",reagentString) }
+			local numReagents = #reagentList / 2
 			
-			self:ItemDataAddUsedInRecipe(reagentID, recipeID)
+			for i=1,numReagents do
+				local reagentID = tonumber(reagentList[1 + (i-1)*2])
+				
+				self:ItemDataAddUsedInRecipe(reagentID, recipeID)
+			end
 		end
 	end
 	
@@ -278,12 +284,18 @@ end
 
 -- resets the blizzard tradeskill search filters just to make sure no other addon has monkeyed with them
 function SkilletData:ResetTradeSkillFilter()
+	if not GetTradeSkillSubClassFilter(0) then
+		SetTradeSkillSubClassFilter(0, 1, 1)
+	end
 	SetTradeSkillItemNameFilter("")	 			
 	SetTradeSkillItemLevelFilter(0,0)
 end
 
 
 function SkilletLink:ResetTradeSkillFilter()
+	if not GetTradeSkillSubClassFilter(0) then
+		SetTradeSkillSubClassFilter(0, 1, 1)
+	end
 	SetTradeSkillItemNameFilter("")	 			
 	SetTradeSkillItemLevelFilter(0,0)
 end
@@ -406,15 +418,17 @@ function SkilletData:GetRecipe(id)
 		Skillet.data.recipeList[id].slot = slot
 		
 		Skillet.data.recipeList[id].reagentData = {}
-
-		local reagentList = { string.split(":",reagentString) }
-		local numReagents = #reagentList / 2
+	
+		if reagentString ~= "-" then
+			local reagentList = { string.split(":",reagentString) }
+			local numReagents = #reagentList / 2
 		
-		for i=1,numReagents do
-			Skillet.data.recipeList[id].reagentData[i] = {}
-			
-			Skillet.data.recipeList[id].reagentData[i].id = tonumber(reagentList[1 + (i-1)*2])
-			Skillet.data.recipeList[id].reagentData[i].numNeeded = tonumber(reagentList[2 + (i-1)*2])
+			for i=1,numReagents do
+				Skillet.data.recipeList[id].reagentData[i] = {}
+				
+				Skillet.data.recipeList[id].reagentData[i].id = tonumber(reagentList[1 + (i-1)*2])
+				Skillet.data.recipeList[id].reagentData[i].numNeeded = tonumber(reagentList[2 + (i-1)*2])
+			end
 		end
 		
 		if toolString ~= "-" then
@@ -523,12 +537,18 @@ end
 
 function SkilletLink:GetSkill(player,trade,index)
 	if player and trade and index then
+		local scanned = true
+		
 		if not Skillet.data.skillList[player] or not Skillet.data.skillList[player][trade] then
-			self:RescanTrade()
+			scanned = self:RescanTrade()
 		end
 --DEFAULT_CHAT_FRAME:AddMessage("getskillLink "..(player or "noplayer").." "..(trade or "notrade").." "..(index or "noindex"))
 
-		return Skillet.data.skillList[player][trade][index]
+		if scanned then
+			return Skillet.data.skillList[player][trade][index]
+		else
+			return nil
+		end
 	end
 end
 
@@ -623,7 +643,6 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 --DEFAULT_CHAT_FRAME:AddMessage("**** skill: "..(skillName or "nil").." "..i)
 
 			gotNil = false
-		
 			
 			if skillName then
 				if skillType == "header" then
@@ -862,9 +881,14 @@ DebugSpam("all sorted")
 	
 	collectgarbage("collect")
 	
+	
+	
 	if numHeaders == 0 then
+		skillData.scanned = false
 		return false
 	end
+	
+	skillData.scanned = true
 	
 	return true
 --	AceEvent:TriggerEvent("Skillet_Scan_Complete", profession)
@@ -1136,8 +1160,8 @@ end
 -- Internal
 function Skillet:Skillet_AutoRescan()
 local start = GetTime()
-DebugSpam("AUTO RESCAN")
-	if InCombatLockdown() then
+--DEFAULT_CHAT_FRAME:AddMessage("AUTO RESCAN")
+	if InCombatLockdown() or not SkilletFrame:IsVisible() then
 		return
 	end
 
@@ -1146,6 +1170,7 @@ DebugSpam("AUTO RESCAN")
 	end
 
 	if not self:RescanTrade() then
+--DEFAULT_CHAT_FRAME:AddMessage("AUTO RESCAN FAILED!?")
 		AceEvent:ScheduleEvent("Skillet_AutoRescan", self.Skillet_AutoRescan, 0.5,self)
 	end
 	
@@ -1180,6 +1205,7 @@ function Skillet:CHAT_MSG_SKILL()
 end
 
 function Skillet:CHAT_MSG_SYSTEM()
+--DEFAULT_CHAT_FRAME:AddMessage("CHAT_MSG_SYSTEM "..(event or "nil"))
 	local cutString = string.sub(1,(string.find(ERR_LEARN_RECIPE_S,"%s")))
 --DebugSpam("CHAT_MSG_SYSTEM "..(arg1 or "nil").." vs "..cutString)
 	if arg1 and string.find(arg1, cutString) then
@@ -1227,7 +1253,9 @@ DebugSpam("RescanTrade")
 	
 	if dataModule and dataModule.RescanTrade then
 		return dataModule.RescanTrade(dataModule, force)
-	end	
+	end
+	
+	return true
 end
 
 
@@ -1260,7 +1288,7 @@ DebugSpam("Forced Rescan")
 
 	
 	Skillet:ScanQueuedReagents()
-
+	
 	Skillet.dataScanned = self:ScanTrade()
 
 	DebugSpam("TRADESKILL HAS BEEN SCANNED")
@@ -1624,7 +1652,7 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 							recipe.itemID = 0												-- indicates an enchant
 						end
 						
-						local reagentString = nil
+						local reagentString = "-"
 						
 						
 						local reagentData = {}
@@ -1649,7 +1677,7 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 							reagentData[j].id = reagentID
 							reagentData[j].numNeeded = numNeeded
 							
-							if reagentString then
+							if reagentString ~= "-" then
 								reagentString = reagentString..":"..reagentID..":"..numNeeded
 							else
 								reagentString = reagentID..":"..numNeeded
@@ -1701,9 +1729,11 @@ DebugSpam("all sorted")
 	
 	
 	if numHeaders == 0 then
+		skillData.scanned = false
 		return false
 	end
 	
+	skillData.scanned = true
 	return true
 --	AceEvent:TriggerEvent("Skillet_Scan_Complete", profession)
 end

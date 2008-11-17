@@ -711,7 +711,7 @@ function Skillet:UpdateTradeButtons(player)
 			if tradeID == self.currentTrade then
 				button:SetChecked(1)
 				
-				if Skillet.dataScanned then
+				if Skillet.data.skillList[player][tradeID].scanned then
 					buttonIcon:SetVertexColor(1,1,1)
 				else
 					buttonIcon:SetVertexColor(1,0,0)
@@ -807,7 +807,7 @@ function Skillet:internal_UpdateTradeSkillWindow()
 
 	
 	if not self.dataScanned then
-		self:RescanTrade()
+		self.dataScanned = self:RescanTrade()
 		
 		self:SortAndFilterRecipes()
 	end
@@ -1113,70 +1113,75 @@ function Skillet:internal_UpdateTradeSkillWindow()
 				
 				text = (self:GetRecipeNamePrefix(self.currentTrade, skillIndex) or "") .. skill.name
 				
-				local num, numwvendor, numwbank, numwalts = get_craftable_counts(skill.skillData, recipe.numMade)
-				local cbag = "|cffffff80"
-				local cvendor = "|cff80ff80"
-				local cbank =  "|cffffa050"
-				local calts = "|cffff80ff"
+				if #recipe.reagentData > 0 then
 				
-				
-				if (num > 0 and showBag) or (numwvendor > 0 and showVendor) or (numwbank > 0 and showBank) or (numwalts > 0 and showAlts) then
---				if num > 0 or numwvendor > 0 or numwbank > 0 or numwalts > 0 then
-					local c = 1
+					local num, numwvendor, numwbank, numwalts = get_craftable_counts(skill.skillData, recipe.numMade)
+					local cbag = "|cffffff80"
+					local cvendor = "|cff80ff80"
+					local cbank =  "|cffffa050"
+					local calts = "|cffff80ff"
 					
-					if showBag then
-						if num >= 1000 then
-							num = "##"
-						end
+					
+					if (num > 0 and showBag) or (numwvendor > 0 and showVendor) or (numwbank > 0 and showBank) or (numwalts > 0 and showAlts) then
+	--				if num > 0 or numwvendor > 0 or numwbank > 0 or numwalts > 0 then
+						local c = 1
 						
-						catstring[c] = cbag .. num 
-						c = c + 1
-					end
-					
-					if showVendor then
-						if numwvendor >= 1000 then
-							numwvendor = "##"
-						end
-						
-						catstring[c] = cvendor .. numwvendor 
-						c = c + 1
-					end
-					
-					if showBank then 
-						if numwbank >= 1000 then
-							numwbank = "##"
-						end
-						
-						catstring[c] =  cbank .. numwbank 
-						c = c + 1
-					end
-					
-					if showAlts then
-						if numwalts >= 1000 then
-							numwalts = "##"
-						end
-						
-						catstring[c] = calts .. numwalts
-						c = c + 1
-					end
-					
-					local count = ""
-					
-					if c > 1 then
-						count = "|cffa0a0a0["
-						
-						for b=1,c-1 do
-							count = count .. catstring[b]
-							if b+1 < c then
-								count = count .. "|cffa0a0a0/"
+						if showBag then
+							if num >= 1000 then
+								num = "##"
 							end
+							
+							catstring[c] = cbag .. num 
+							c = c + 1
 						end
 						
-						count = count .. "|cffa0a0a0]|r"
-					end
+						if showVendor then
+							if numwvendor >= 1000 then
+								numwvendor = "##"
+							end
+							
+							catstring[c] = cvendor .. numwvendor 
+							c = c + 1
+						end
+						
+						if showBank then 
+							if numwbank >= 1000 then
+								numwbank = "##"
+							end
+							
+							catstring[c] =  cbank .. numwbank 
+							c = c + 1
+						end
+						
+						if showAlts then
+							if numwalts >= 1000 then
+								numwalts = "##"
+							end
+							
+							catstring[c] = calts .. numwalts
+							c = c + 1
+						end
+						
+						local count = ""
+						
+						if c > 1 then
+							count = "|cffa0a0a0["
+							
+							for b=1,c-1 do
+								count = count .. catstring[b]
+								if b+1 < c then
+									count = count .. "|cffa0a0a0/"
+								end
+							end
+							
+							count = count .. "|cffa0a0a0]|r"
+						end
 
-					countText:SetText(count)
-					countText:Show()
+						countText:SetText(count)
+						countText:Show()
+					else
+						countText:Hide()
+					end
 				else
 					countText:Hide()
 				end
@@ -1640,6 +1645,7 @@ end
 
 local lastDetailUpdate = 0
 local lastUpdateSpellID = nil
+local ARLProfessionInitialized = {}
 -- Updates the details window with information about the currently selected skill
 function Skillet:UpdateDetailsWindow(skillIndex)
 	if not skillIndex or skillIndex < 0 then
@@ -1886,13 +1892,11 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 		
 		local recipeData = AckisRecipeList:GetRecipeData(skill.id)
 		
-		if recipeData == nil then
---DEFAULT_CHAT_FRAME:AddMessage("ARL Data can't find "..skill.id)
-
+		if recipeData == nil and not ARLProfessionInitialized[recipe.tradeID] then
+			ARLProfessionInitialized[recipe.tradeID] = true
+			
 			local profession = GetSpellInfo(recipe.tradeID)
-			
---DEFAULT_CHAT_FRAME:AddMessage("ARL Data adding profession "..profession)
-			
+	
 			AckisRecipeList:AddRecipeData(profession)
 			
 			recipeData = AckisRecipeList:GetRecipeData(skill.id)
