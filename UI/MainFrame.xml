@@ -29,7 +29,7 @@
 	
 	<CheckButton name="SkilletTradeButtonTemplate" virtual="true" hidden="true">
 		<Size>
-			<AbsDimension x="26" y="26"/>
+			<AbsDimension x="25" y="25"/>
 		</Size>
 		<Layers>
 			<Layer level="BACKGROUND">
@@ -2251,7 +2251,7 @@
 				</Anchors>
 				<Scripts>
 					<OnVerticalScroll>
-						FauxScrollFrame_OnVerticalScroll(self, SKILLET_TRADE_SKILL_HEIGHT, Skillet.QueueList_OnScroll);
+						FauxScrollFrame_OnVerticalScroll(self, offset, SKILLET_TRADE_SKILL_HEIGHT, Skillet.QueueList_OnScroll);
 					</OnVerticalScroll>
 				</Scripts>
 			</ScrollFrame>

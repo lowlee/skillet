@@ -1,4 +1,4 @@
-## Interface: 30000
+## Interface: 30100
 ## Title: Skillet |cff7fff7f -Ace2-|r
 ## Notes: A replacement tradeskill window
 ## Author: nogudnik, lilsparky
@@ -17,6 +17,10 @@
 ## SavedVariablesPerCharacter: SkilletDBPC
 ## OptionalDeps: Ace2, Waterfall-1.0, AbacusLib, Fizzwidget Reagent Cost, LibPeriodicTable-3.1, WindowLib, LibStub, CharacterInfoStorage, Sanity2
 ## X-Embeds: Ace2, Waterfall-1.0, AbacusLib, LibPeriodicTable-3.1, WindowLib
+
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
+
 
 #### List of embedded libraries
 #@no-lib-strip@

@@ -48,28 +48,28 @@ local function sort_recipe_by_skill_level(tradeskill, a, b)
 	while a.subGroup and #a.subGroup.entries>0 do
 		a = a.subGroup.entries[1]
 	end
-	
+
 	while b.subGroup and #b.subGroup.entries>0 do
 		b = b.subGroup.entries[1]
 	end
-	
+
 	local leftDifficulty = 0
 	local rightDifficulty = 0
-	
+
 	if a.skillData then
 		leftDifficulty = skill_style_type[a.skillData.difficulty].level
 	end
-	
+
 	if b.skillData then
 		rightDifficulty = skill_style_type[b.skillData.difficulty].level
 	end
-	
+
 	if leftDifficulty == rightDifficulty then
 --DEFAULT_CHAT_FRAME:AddMessage("a: "..(a.spellID or "nil"))
 --DEFAULT_CHAT_FRAME:AddMessage("b: "..(b.spellID or "nil"))
 		local left = Skillet:GetTradeSkillLevels(a.spellID)
 		local right = Skillet:GetTradeSkillLevels(b.spellID)
-		
+
 		if left == right then
 			if a.subGroup and b.subGroup then
 				return #a.subGroup.entries < #b.subGroup.entries
@@ -89,26 +89,26 @@ local function sort_recipe_by_item_level(tradeskill, a, b)
 	while a.subGroup and #a.subGroup.entries>0 do
 		a = a.subGroup.entries[1]
 	end
-	
+
 	while b.subGroup and #b.subGroup.entries>0 do
 		b = b.subGroup.entries[1]
 	end
-	
+
 	local left_r = Skillet:GetRecipe(a.recipeID)
 	local right_r = Skillet:GetRecipe(b.recipeID)
-	
+
 	local left  = Skillet:GetLevelRequiredToUse(left_r.itemID)
 	local right = Skillet:GetLevelRequiredToUse(right_r.itemID)
-	
+
     if not left  then  left = 0 end
     if not right then right = 0 end
 
     if left == right then
 		-- same level, try iLevel next
-		
+
 		local left = select(4,GetItemInfo(left_r.itemID)) or 0
 		local right = select(4,GetItemInfo(right_r.itemID)) or 0
-		
+
 		if left == right then
 			-- same level, sort by difficulty
         	return sort_recipe_by_skill_level(tradeskill, a, b)
@@ -124,11 +124,11 @@ local function sort_recipe_by_item_quality(tradeskill, a, b)
 	while a.subGroup and #a.subGroup.entries>0 do
 		a = a.subGroup.entries[1]
 	end
-	
+
 	while b.subGroup and #b.subGroup.entries>0 do
 		b = b.subGroup.entries[1]
 	end
-	
+
 	local left_r = Skillet:GetRecipe(a.recipeID)
 	local right_r = Skillet:GetRecipe(b.recipeID)
 
@@ -152,12 +152,12 @@ local function sort_recipe_by_index(tradeskill, a, b)
 	if a.subGroup and not b.subGroup then
 		return true
 	end
-	
+
 	if b.subGroup and not a.subGroup then
 		return false
 	end
-	
-	
+
+
 	if (a.skillIndex or 0) == (b.skillIndex or 0) then
 		return (a.name or "A") < (b.name or "B")
 	else
@@ -179,21 +179,21 @@ local function SkillIsFilteredOut(skillIndex)
 
 	local skill = Skillet:GetSkill(Skillet.currentPlayer, Skillet.currentTrade, skillIndex)
 	local recipe = Skillet:GetRecipe(skill.id)
-	
+
 	local recipeID = recipe.spellID or 0
-	
+
 	if recipeID == 0 then
 		-- it's a header, don't filter here
 		return false
-	end 
+	end
 
-		-- are we hiding anything that is trivial (has no chance of giving a skill point)	
+		-- are we hiding anything that is trivial (has no chance of giving a skill point)
 	if skill_style_type[skill.difficulty].level < (Skillet:GetTradeSkillOption("filterLevel") or 4) then
 		return true
 	end
-	
+
 	-- are we hiding anything that can't be created with the mats on this character?
-	if Skillet:GetTradeSkillOption("hideuncraftable") then	
+	if Skillet:GetTradeSkillOption("hideuncraftable") then
 		if not (skill.numCraftable > 0 and Skillet:GetTradeSkillOption("filterInventory-bag")) and
 		   not (skill.numCraftableVendor > 0 and Skillet:GetTradeSkillOption("filterInventory-vendor")) and
 		   not (skill.numCraftableBank > 0 and Skillet:GetTradeSkillOption("filterInventory-bank")) and
@@ -201,15 +201,15 @@ local function SkillIsFilteredOut(skillIndex)
 			return true
 		end
 	end
-	
-	
+
+
 	if Skillet.recipeFilters then
 		for _,f in pairs(Skillet.recipeFilters) do
 			if f.filterMethod(f.namespace, skillIndex) then
 				return true
 			end
 		end
-	end	
+	end
 
 	-- string search
 	local filtertext = Skillet:GetTradeSkillOption("filtertext")
@@ -226,39 +226,39 @@ local function SkillIsFilteredOut(skillIndex)
 			tooltip = CreateFrame("GameTooltip", "SkilletParsingTooltip", getglobal("ANCHOR_NONE"), "GameTooltipTemplate")
 			tooltip:SetOwner(WorldFrame, "ANCHOR_NONE");
 		end
-		
+
 
 		local searchText = ""
-		
+
 		if not Skillet.data.tooltipCache or Skillet.data.tooltipCachedTrade ~= Skillet.currentTrade then
 			Skillet.data.tooltipCachedTrade = Skillet.currentTrade
 			Skillet.data.tooltipCache = {}
 		end
-		
+
 		if not Skillet.data.tooltipCache[recipeID] then
 			tooltip:SetHyperlink("enchant:"..recipeID)
 			local tiplines = tooltip:NumLines()
-		
+
 			for i=1, tiplines, 1 do
 				searchText = searchText.. " " .. string.lower(getglobal("SkilletParsingTooltipTextLeft"..i):GetText() or " ")
 				searchText = searchText.. " " .. string.lower(getglobal("SkilletParsingTooltipTextRight"..i):GetText() or " ")
-			end		
+			end
 			Skillet.data.tooltipCache[recipeID] = searchText
 		else
 			searchText = Skillet.data.tooltipCache[recipeID]
 		end
-		
+
 		local wordList = { string.split(" ",filter) }
-		
+
 		for v,word in pairs(wordList) do
 			if string.find(searchText, word, 1, true) == nil then
 				return true
 			end
 		end
 	end
-	
+
 	return false
-end 		
+end
 
 
 local function set_sort_desc(toggle)
@@ -299,33 +299,33 @@ end
 -- Builds a sorted and fitlered list of recipes for the
 -- currently selected tradekskill and sorting method
 -- if no sorting, then headers will be included
-local function SortAndFilterRecipes()	
+local function SortAndFilterRecipes()
 --	if not (Skillet.db.server.skillDB[Skillet.currentPlayer] and Skillet.db.server.skillDB[Skillet.currentPlayer][Skillet.currentTrade]) then
 --DebugSpam("No Data")
 --		return 0
 --	end
-	
+
 	local skillListKey = Skillet.currentPlayer..":"..Skillet.currentTrade..":"..Skillet.currentGroupLabel
-		
+
 	DebugSpam("Sorting...");
-	
+
 --	local skillDB = Skillet.db.server.skillDB[Skillet.currentPlayer][Skillet.currentTrade]
 	local numSkills = Skillet:GetNumSkills(Skillet.currentPlayer, Skillet.currentTrade)
 --	local recipeData = Skillet.db.account.recipeData
-	
+
 	if not Skillet.data.sortedSkillList then
 		Skillet.data.sortedSkillList = {}
 	end
-	
+
 	if not Skillet.data.sortedSkillList[skillListKey] then
 		Skillet.data.sortedSkillList[skillListKey] = {}
 	end
-	
-	
+
+
 	local sortedSkillList = Skillet.data.sortedSkillList[skillListKey]
-	
+
 	local oldLength = #sortedSkillList
-	
+
 	local button_index = 0
 	local filtertext = Skillet:GetTradeSkillOption("filtertext")
 	local groupLabel = Skillet.currentGroupLabel
@@ -337,7 +337,7 @@ local function SortAndFilterRecipes()
 
 			if skill then
 				local recipe = Skillet:GetRecipe(skill.id)
-			
+
 				if skill.id ~= 0 then							-- not a header
 					if not SkillIsFilteredOut(i) then		-- skill is not filtered out
 						button_index = button_index + 1
@@ -346,16 +346,16 @@ local function SortAndFilterRecipes()
 				end
 			end
         end
-        
+
 		if oldLength > button_index then
 			while oldLength > button_index do
 				sortedSkillList[oldLength] = nil
-				
+
 				oldLength = oldLength - 1
 			end
 		end
-		
-		
+
+
  		if not is_sort_desc() then
         	table.sort(sortedSkillList, function(a,b)
            		return recipe_sort_method(Skillet.currentTrade, a, b)
@@ -368,11 +368,11 @@ local function SortAndFilterRecipes()
 	else
 		local group = Skillet:RecipeGroupFind(Skillet.currentPlayer, Skillet.currentTrade, Skillet.currentGroupLabel, Skillet.currentGroup)
 DebugSpam("current grouping "..Skillet.currentGroupLabel.." "..(Skillet.currentGroup or "nil"))
-		
+
 		if recipe_sort_method ~= NOSORT then
 			Skillet:RecipeGroupSort(group, recipe_sort_method, is_sort_desc())
 		end
-		
+
 		if Skillet.currentGroup then
 			Skillet:RecipeGroupInitFlatten(group, sortedSkillList)
 			button_index = Skillet:RecipeGroupFlatten(group, 1, sortedSkillList, 1)
@@ -380,11 +380,11 @@ DebugSpam("current grouping "..Skillet.currentGroupLabel.." "..(Skillet.currentG
 			button_index = Skillet:RecipeGroupFlatten(group, 0, sortedSkillList, 0)
 		end
 	end
-	
-	
+
+
 DebugSpam("sorted "..button_index.." skills")
 	sortedSkillList.count = button_index
-	
+
 	return button_index
 end
 
@@ -501,7 +501,7 @@ function Skillet:SortDropdown_OnLoad()
             break
         end
     end
-	
+
 --	show_sort_toggle()
 end
 
@@ -538,11 +538,11 @@ function Skillet:SortDropdown_Initialize()
         info.func = Skillet.SortDropdown_OnClick
         info.value = i
         i = i + 1
-		
-		if this then 
+
+		if this then
 			info.owner = this:GetParent()
         end
-		
+
 		UIDropDownMenu_AddButton(info)
     end
 
