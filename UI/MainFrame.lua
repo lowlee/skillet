@@ -1004,8 +1004,10 @@ function Skillet:internal_UpdateTradeSkillWindow()
 
 
 			countText:Hide()
+			countText:SetWidth(10)
 
-			buttonText:SetPoint("LEFT", levelText, "RIGHT", skill.depth*8-8, 0)
+--			buttonText:SetPoint("LEFT", levelText, "RIGHT", skill.depth*8-8, 0)
+			levelText:SetWidth(skill.depth*8+20)
 
 			local textAlpha = 1
 
@@ -1039,7 +1041,7 @@ function Skillet:internal_UpdateTradeSkillWindow()
 				end
 			end
 
-
+--[[
 			buttonExpand:SetPoint("RIGHT", levelText, "RIGHT", skill.depth*8-8, 0)
 			buttonExpand:SetPoint("LEFT", levelText, "RIGHT", skill.depth*8-24, 0)
 
@@ -1048,7 +1050,7 @@ function Skillet:internal_UpdateTradeSkillWindow()
 
 			getglobal(button:GetName() .. "ExpandHighlight"):SetPoint("RIGHT", levelText, "RIGHT", skill.depth*8-8, 0)
 			getglobal(button:GetName() .. "ExpandHighlight"):SetPoint("LEFT", levelText, "RIGHT", skill.depth*8-24, 0)
-
+]]
 
 			if skill.subGroup then
 				if SkillButtonNameEdit.originalButton ~= buttonText then
@@ -1078,11 +1080,11 @@ function Skillet:internal_UpdateTradeSkillWindow()
 
 					local button_width = button:GetTextWidth()
 
-					while button_width > max_text_width - skill.depth*8 do
-						text = string.sub(text, 0, -2)
-						buttonText:SetText(text .. "..")
-						button_width = button:GetTextWidth()
-					end
+--					while button_width > max_text_width - skill.depth*8 do
+--						text = string.sub(text, 0, -2)
+--						buttonText:SetText(text .. "..")
+--						button_width = button:GetTextWidth()
+--					end
 
 					show_button(button, self.currentTrade, skillIndex, i)
 				end
@@ -1192,6 +1194,31 @@ function Skillet:internal_UpdateTradeSkillWindow()
 					countText:Hide()
 				end
 
+				local countWidth = 0
+
+				if showBag then
+					countWidth = countWidth + 20
+				end
+
+				if showBank then
+					countWidth = countWidth + 20
+				end
+
+				if showVendor then
+					countWidth = countWidth + 20
+				end
+
+				if showAlts then
+					countWidth = countWidth + 20
+				end
+
+				if countWidth > 0 then
+					countWidth = countWidth + 20
+				end
+
+				countText:SetWidth(countWidth)
+
+
 				button:SetID(skillIndex or 0)
 
 				if self.db.profile.enhanced_recipe_display then
@@ -1205,15 +1232,7 @@ function Skillet:internal_UpdateTradeSkillWindow()
 				text = text .. (self:GetRecipeNameSuffix(self.currentTrade, skillIndex) or "")
 
 				buttonText:SetText(text)
-
-				-- update the width we use for checking for text truncation
-				local button_width = button:GetTextWidth()
-
-				while button_width > max_text_width - skill.depth*8 do
-					text = string.sub(text, 0, -2)
-					buttonText:SetText(text .. "..")
-					button_width = button:GetTextWidth()
-				end
+				buttonText:SetWidth(max_text_width)
 
 				if not self.dragEngaged and self.selectedSkill and self.selectedSkill == skillIndex then
 --[[
@@ -2772,6 +2791,8 @@ function Skillet:SkilletFrameForceClose()
 		self:FreeCaches()
 		return true
 	else
+		CloseTradeSkill()
+
 		local x = self:HideAllWindows()
 		self:FreeCaches()
 		return x

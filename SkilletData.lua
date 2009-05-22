@@ -475,7 +475,9 @@ end
 
 
 function SkilletData:GetSkillRanks(player, trade)
-	return Skillet.db.server.skillRanks[player][trade]
+	if player and trade then
+		return Skillet.db.server.skillRanks[player][trade]
+	end
 end
 
 
