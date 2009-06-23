@@ -28,10 +28,10 @@ function Skillet:GetTradeSkillLevels(id)
 	else
 		local a,b,c,d = string.split("/",levels)
 
-		a = tonumber(a)
-		b = tonumber(b)
-		c = tonumber(c)
-		d = tonumber(d)
+		a = tonumber(a) or 0
+		b = tonumber(b) or 0
+		c = tonumber(c) or 0
+		d = tonumber(d) or 0
 
 		return a, b, c, d
 	end
