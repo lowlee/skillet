@@ -368,6 +368,7 @@ function Skillet:UpdateNumItemsSlider(item_count, clicked)
 
 	if SkilletCreateCountSlider:IsVisible() then
 		SkilletItemCountInputBox:SetText(tostring(value))
+		SkilletItemCountInputBox:HighlightText()
 		if not clicked then
 			SkilletCreateCountSlider:SetValue(value)
 		end
@@ -1810,6 +1811,7 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 	SkilletCreateCountSlider:SetMinMaxValues(1, math.max(20, (skill.numCraftableBank or 0))) -- s.numcraftablewbank));
 	SkilletCreateCountSlider:SetValue(self.numItemsToCraft);
 	SkilletItemCountInputBox:SetText("" .. self.numItemsToCraft);
+	SkilletItemCountInputBox:HighlightText()
 	SkilletCreateCountSlider.tooltipText = L["Number of items to queue/create"];
 
 	-- Reagents required ...
