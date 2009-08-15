@@ -29,10 +29,10 @@ function Skillet:AdjustInventory()
 			self:InventoryReagentCraftability(id)
 		end
 	end
-	
+
 	self:CalculateCraftableCounts()
 	self.dataScanned = false
-	
+
 	self.reagentsChanged = {}
 end
 
@@ -45,7 +45,7 @@ function Skillet:QueueCommandIterate(recipeID, count)
 	newCommand.op = "iterate"
 	newCommand.recipeID = recipeID
 	newCommand.count = count
-	
+
 	return newCommand
 end
 
@@ -53,12 +53,12 @@ end
 -- not currently implemented
 function Skillet:QueueCommandInventory(recipeID, itemID, count)
 	local newCommand = {}
-	
+
 	newCommand.op = "inventory"
 	newCommand.recipeID = recipeID
 	newCommand.itemID = itemID
 	newCommand.count = count
-	
+
 	return newCommand
 end
 
@@ -66,11 +66,11 @@ end
 -- not currently implemented
 function Skillet:QueueCommandSkillLevel(recipeID, level)
 	local newCommand = {}
-	
+
 	newCommand.op = "skillLevel"
 	newCommand.recipeID = recipeID
 	newCommand.count = level
-	
+
 	return newCommand
 end
 
@@ -81,55 +81,55 @@ function Skillet:QueueAppendCommand(command, queueCraftables)
 
 	if recipe and not self.visited[command.recipeID] then
 		self.visited[command.recipeID] = true
-		
+
 		local count = command.count
 		local reagentsInQueue = self.db.server.reagentsInQueue[Skillet.currentPlayer]
 		local reagentsChanged = self.reagentsChanged
 		local skillIndexLookup = self.data.skillIndexLookup[Skillet.currentPlayer]
-		
+
 		for i=1,#recipe.reagentData,1 do
 			local reagent = recipe.reagentData[i]
-			
+
 			local need = count * reagent.numNeeded
 			local _,_,numInBank = Skillet:GetInventory(Skillet.currentPlayer, reagent.id)
-			
+
 			local have = numInBank + (reagentsInQueue[reagent.id] or 0);
-			
+
 			reagentsInQueue[reagent.id] = (reagentsInQueue[reagent.id] or 0) - need;
-			
+
 			reagentsChanged[reagent.id] = true
-			
+
 			if queueCraftables and need > have then
 				local recipeSource = self.data.itemRecipeSource[reagent.id]
-				
-				if recipeSource then	
+
+				if recipeSource then
 					for recipeSourceID in pairs(recipeSource) do
 						local skillIndex = skillIndexLookup[recipeSourceID]
-						
-						if skillIndex then						
-							command.complex = true						-- identify that this queue has craftable reagent requirements		
-							
+
+						if skillIndex then
+							command.complex = true						-- identify that this queue has craftable reagent requirements
+
 							local recipeSource = Skillet:GetRecipe(recipeSourceID)
-							
+
 							local newCount = math.ceil((need - have)/recipeSource.numMade)
-								
+
 							local newCommand = self:QueueCommandIterate(recipeSourceID, newCount)
-							
+
 							newCommand.level = (command.level or 0) + 1
-							
+
 							self:QueueAppendCommand(newCommand, queueCraftables)
 						end
 					end
 				end
 			end
 		end
-		
+
 		reagentsInQueue[recipe.itemID] = (reagentsInQueue[recipe.itemID] or 0) + command.count * recipe.numMade;
-		
+
 		reagentsChanged[recipe.itemID] = true
-		
+
 		Skillet:AddToQueue(command)
-		
+
 		self.visited[command.recipeID] = nil
 	end
 end
@@ -140,10 +140,10 @@ end
 -- the additional queue entry doesn't require some additional craftable reagents
 function Skillet:AddToQueue(command)
 	local queue = self.db.server.queueData[self.currentPlayer]
-	
+
 	if (not command.complex) then		-- we can add this queue entry to any of the other entries
 		local added
-		
+
 		for i=1,#queue,1 do
 			if queue[i].op == "iterate" and queue[i].recipeID == command.recipeID then
 				queue[i].count = queue[i].count + command.count
@@ -151,14 +151,14 @@ function Skillet:AddToQueue(command)
 				break
 			end
 		end
-		
+
 		if not added then
 			table.insert(queue, command)
 		end
 	else
 		table.insert(queue, command)
 	end
-	
+
 	AceEvent:TriggerEvent("Skillet_Queue_Add")
 end
 
@@ -169,23 +169,23 @@ function Skillet:RemoveFromQueue(index)
 	local command = queue[index]
 	local reagentsInQueue = self.db.server.reagentsInQueue[Skillet.currentPlayer]
 	local reagentsChanged = self.reagentsChanged
-	
+
 	if command.op == "iterate" then
 		local recipe = self:GetRecipe(command.recipeID)
-	
+
 		reagentsInQueue[recipe.itemID] = (reagentsInQueue[recipe.itemID] or 0) - recipe.numMade * command.count
 		reagentsChanged[recipe.itemID] = true
-					
+
 		for i=1,#recipe.reagentData,1 do
 			local reagent = recipe.reagentData[i]
-			
+
 			reagentsInQueue[reagent.id] = (reagentsInQueue[reagent.id] or 0) + reagent.numNeeded * command.count
 			reagentsChanged[reagent.id] = true
 		end
 	end
-	
+
 	table.remove(queue, index)
-	
+
 	self:AdjustInventory()
 end
 
@@ -196,13 +196,13 @@ DebugSpam("ClearQueue")
 
 		self.db.server.queueData[self.currentPlayer] = {}
 		self.db.server.reagentsInQueue[self.currentPlayer] = {}
-		
+
 		self.dataScanned = false
-		
+
 		self:UpdateTradeSkillWindow()
 	end
-DebugSpam("ClearQueue Complete")	
-	
+DebugSpam("ClearQueue Complete")
+
 	AceEvent:TriggerEvent("Skillet_Queue_Complete")
 end
 
@@ -212,27 +212,27 @@ DebugSpam("PROCESS QUEUE");
 	local queue = self.db.server.queueData[self.currentPlayer]
 	local command = queue[1]
 	local skillIndexLookup = self.data.skillIndexLookup[self.currentPlayer]
-    
+
 	if self.currentPlayer ~= (UnitName("player")) then
 DebugSpam("trying to process from an alt!")
 		return
 	end
-	
-	
+
+
 	if command then
 		if command.op == "iterate" then
 			self.queuecasting = true
-			
+
 			local recipe = self:GetRecipe(command.recipeID)
-			
+
 			if self.currentTrade ~= recipe.tradeID then
     			CastSpellByName(self:GetTradeName(recipe.tradeID))					-- switch professions
             end
-			
+
 			self.processingSpell = self:GetRecipeName(command.recipeID)
---DEFAULT_CHAT_FRAME:AddMessage("processing: "..(self.processingSpell or "nil"))		
-	
-			DoTradeSkill(skillIndexLookup[command.recipeID],command.count)	
+--DEFAULT_CHAT_FRAME:AddMessage("processing: "..(self.processingSpell or "nil"))
+
+			DoTradeSkill(skillIndexLookup[command.recipeID],command.count)
 
 			return
 		else
@@ -248,44 +248,44 @@ end
 -- Adds the currently selected number of items to the queue
 function Skillet:QueueItems(count)
 	local skill = self:GetSkill(self.currentPlayer, self.currentTrade, self.selectedSkill)
-	
+
 	if not skill then return 0 end
-	
+
 	local recipe = self:GetRecipe(skill.id)
 	local recipeID = skill.id
-	
+
 	if not count then
 		count = skill.numCraftable / (recipe.numMade or 1)
-		
+
 		if count == 0 then
 			count = skill.numCraftableVendor / (recipe.numMade or 1)
 		end
-		
+
 		if count == 0 then
 			count = skill.numCraftableBank / (recipe.numMade or 1)
 		end
-		
+
 		if count == 0 then
 			count = skill.numCraftableAlts / (recipe.numMade or 1)
 		end
 	end
-	
+
 	count = math.min(count, 99)
-	
+
 	self.visited = {}
-	
+
 	if count > 0 then
 		if self.currentTrade and self.selectedSkill then
 			if recipe then
 				local queueCommand = self:QueueCommandIterate(recipeID, count)
-				
+
 				self.reagentsChanged = {}
-				self:QueueAppendCommand(queueCommand, Skillet.db.profile.queue_craftable_reagents)			
-				self:AdjustInventory()				
+				self:QueueAppendCommand(queueCommand, Skillet.db.profile.queue_craftable_reagents)
+				self:AdjustInventory()
 			end
 		end
 	end
-	
+
 --	Skillet:UpdateQueueWindow()
 	Skillet:UpdateTradeSkillWindow()
 	return count
@@ -319,16 +319,16 @@ function Skillet:StopCast(spell)
 
 if SkilletFrame:IsVisible() then
 --	DEFAULT_CHAT_FRAME:AddMessage("StopCast "..(event or "nil"))
---	DEFAULT_CHAT_FRAME:AddMessage("StopCast "..(spellBeingCast or "nocast").." "..(spell or "nopass").." "..(self.processingSpell or "noproc"))		
+--	DEFAULT_CHAT_FRAME:AddMessage("StopCast "..(spellBeingCast or "nocast").." "..(spell or "nopass").." "..(self.processingSpell or "noproc"))
 end
 
 	if not self.db.server.queueData then
 		self.db.server.queueData = {}
 	end
-	
-	
+
+
 	local queue = self.db.server.queueData[self.currentPlayer]
-	
+
 	if spell == self.processingSpell then
 		if event == "UNIT_SPELLCAST_SUCCEEDED" then
 			if not queue[1] then
@@ -339,11 +339,11 @@ end
 
 				self:UpdateTradeSkillWindow()
 				return
-			else
-				if self:GetRecipe(queue[1].recipeID).tradeID == 7411 then
-					self.queuecasting = false
-					self.processingSpell = nil
-				end
+--			else
+--				if self:GetRecipe(queue[1].recipeID).tradeID == 7411 then
+--					self.queuecasting = false
+--					self.processingSpell = nil
+--				end
 			end
 
 			if queue[1].op == "iterate" then
@@ -355,7 +355,7 @@ end
 					self.processingSpell = nil
 					self.reagentsChanged = {}
 					self:RemoveFromQueue(1)		-- implied queued reagent inventory adjustment in remove routine
-					self:RescanTrade()		
+					self:RescanTrade()
 --					DEFAULT_CHAT_FRAME:AddMessage("removed queue command")
 				end
 			end
@@ -365,7 +365,7 @@ end
 		end
 
 --		DEFAULT_CHAT_FRAME:AddMessage("STOP CAST IS UPDATING WINDOW")
-		
+
 		self:InventoryScan()
 		self:UpdateTradeSkillWindow()
 	end
@@ -384,10 +384,10 @@ function Skillet:RemoveQueuedCommand(queueIndex)
 	if queueIndex == 1 then
         self:CancelCast()
     end
-	
+
 	self.reagentsChanged = {}
     self:RemoveFromQueue(queueIndex)
- 
+
 	self:UpdateQueueWindow()
 	self:UpdateTradeSkillWindow()
 end
@@ -397,23 +397,23 @@ end
 function Skillet:ScanQueuedReagents()
 DebugSpam("ScanQueuedReagents")
 	local reagentsInQueue = {}
-	
+
 	for i,command in pairs(self.db.server.queueData[self.currentPlayer]) do
 		if command.op == "iterate" then
 			local recipe = self:GetRecipe(command.recipeID)
-			
+
 			if recipe.numMade > 0 then
 				reagentsInQueue[recipe.itemID] = command.count * recipe.numMade + (reagentsInQueue[recipe.itemID] or 0)
 			end
-			
+
 			for i=1,#recipe.reagentData,1 do
 				local reagent = recipe.reagentData[i]
-			
+
 				reagentsInQueue[reagent.id] = (reagentsInQueue[reagent.id] or 0) - reagent.numNeeded * command.count
 			end
 		end
 	end
-	
+
 	self.db.server.reagentsInQueue[self.currentPlayer] = reagentsInQueue
 end
 
@@ -474,11 +474,11 @@ function Skillet:ReserveReagentsForQueuedRecipes(playername)
                     	if (queue[i].op == "iterate") then
                     		local recipe = self:GetRecipe(queue[i].recipeID)
                     		local count = queue[i].count
-                    		
+
 							for j=1, #recipe.reagentData, 1 do
 								local reagent = recipe.reagentData[j]
 								local needed = count * reagent.numNeeded
-																
+
 								list[reagentID] = needed
 							end
                         end
@@ -488,6 +488,6 @@ function Skillet:ReserveReagentsForQueuedRecipes(playername)
             end
         end
     end
-	
+
 	self.reagentsInQueue = list
 end

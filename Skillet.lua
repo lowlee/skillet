@@ -412,6 +412,18 @@ function Skillet:GetIDFromLink(link)				-- works with items or enchants
 end
 
 
+function Skillet:DisableBlizzardFrame()
+	if self.BlizzardTradeSkillFrame == nil then
+		if (not IsAddOnLoaded("Blizzard_TradeSkillUI")) then
+			LoadAddOn("Blizzard_TradeSkillUI");
+		end
+
+		self.BlizzardTradeSkillFrame = TradeSkillFrame
+		self.BlizzardTradeSkillFrame_Show = TradeSkillFrame_Show
+
+		TradeSkillFrame_Show = DoNothing
+	end
+end
 
 
 -- Called when the addon is loaded
@@ -439,14 +451,7 @@ function Skillet:OnInitialize()
     -- no need to be spammy about the fact that we are here, they'll find out seen enough
 	-- self:Print("Skillet v" .. self.version .. " loaded");
 
-	if (not IsAddOnLoaded("Blizzard_TradeSkillUI")) then
-		LoadAddOn("Blizzard_TradeSkillUI");
-	end
-
-	self.BlizzardTradeSkillFrame = TradeSkillFrame
-	self.BlizzardTradeSkillFrame_Show = TradeSkillFrame_Show
-
-	TradeSkillFrame_Show = DoNothing
+	self:DisableBlizzardFrame()
 
     self:RegisterChatCommand({"/skillet"}, self.options, "SKILLET")
 end
@@ -458,7 +463,7 @@ end
 
 function Skillet:FlushAllData()
 	Skillet.data = {}
-	Skillet.db.account.recipeDB = {}
+	Skillet.data.recipeDB = {}
 
 	Skillet.db.server.skillRanks = {}
 	Skillet.db.server.skillDB = {}
@@ -524,8 +529,8 @@ DebugSpam("initialize database for "..player)
 		self.data.groupList[player] = {}
 	end
 
-	if not self.db.account.recipeDB then
-		self.db.account.recipeDB = {}
+	if not self.data.recipeDB then
+		self.data.recipeDB = {}
 	end
 
 	if not self.db.server.queueData then
@@ -661,6 +666,9 @@ function Skillet:OnEnable()
                    "colorG",     0.7,
                    "colorB",     0
                    )
+
+	self:DisableBlizzardFrame()
+
 --	AceLibrary("Waterfall-1.0"):Open("Skillet")
 end
 
@@ -717,7 +725,6 @@ DebugSpam("SHOW WINDOW (was showing "..(self.currentTrade or "nil")..")");
 
 		self.currentPlayer = (UnitName("player"))
 	end
-
 
 --DEFAULT_CHAT_FRAME:AddMessage("SkilletShow")
 

@@ -149,7 +149,7 @@ function Skillet:CollectRecipeInformation()
 		end
 	end
 ]]
-	for recipeID, recipeString in pairs(self.db.account.recipeDB) do
+	for recipeID, recipeString in pairs(self.data.recipeDB) do
 
 		local tradeID, itemString, reagentString, toolString = string.split(" ",recipeString)
 		local itemID, numMade = 0, 1
@@ -348,8 +348,8 @@ function SkilletData:GetRecipe(id)
 	if not id or id == 0 then return self.unknownRecipe end
 --DEFAULT_CHAT_FRAME:AddMessage("skilletData "..(id or "nil"))
 
-	if (not Skillet.data.recipeList[id]) and Skillet.db.account.recipeDB[id] then
-		local recipeString = Skillet.db.account.recipeDB[id]
+	if (not Skillet.data.recipeList[id]) and Skillet.data.recipeDB[id] then
+		local recipeString = Skillet.data.recipeDB[id]
 
 		local tradeID, itemString, reagentString, toolString = string.split(" ",recipeString)
 		local itemID, numMade = 0, 1
@@ -1311,6 +1311,7 @@ DebugSpam("Forced Rescan")
 --			self.db.server.skillDB[self.currentPlayer]={}
 --			self.db.server.groupDB = {}
 
+
 			Skillet:InitializeDatabase(player, true)
 
 			local firstSkill
@@ -1426,7 +1427,12 @@ DebugSpam("Scanning Trade "..(profession or "nil")..":"..(tradeID or "nil").." "
 
 	local skillDB = Skillet.db.server.skillDB[player][tradeID]
 	local skillData = Skillet.data.skillList[player][tradeID]
-	local recipeDB = Skillet.db.account.recipeDB
+	local recipeDB = Skillet.data.recipeDB
+
+	if not skillData then
+		self.scanInProgress = false
+		return false
+	end
 
 	local lastHeader = nil
 	local gotNil = false
@@ -1710,14 +1716,14 @@ end
 
 
 function SkilletData:EnchantingRecipeSlotAssign(recipeID, slot)
-	local recipeString = Skillet.db.account.recipeDB[recipeID]
+	local recipeString = Skillet.data.recipeDB[recipeID]
 
 	local tradeID, itemString, reagentString, toolString = string.split(" ",recipeString)
 
 	if itemString == "0" then
 		itemString = "0:"..slot
 
-		Skillet.db.account.recipeDB[recipeID] = tradeID.." 0:"..slot.." "..reagentString.." "..toolString
+		Skillet.data.recipeDB[recipeID] = tradeID.." 0:"..slot.." "..reagentString.." "..toolString
 
 		Skillet:GetRecipe(recipeID)
 --DEFAULT_CHAT_FRAME:AddMessage(Skillet.data.recipeList[recipeID].name or "noName")

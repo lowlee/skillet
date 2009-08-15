@@ -1731,7 +1731,7 @@ function Skillet:UpdateDetailsWindow(skillIndex)
 		SkilletRecipeNotesButton:Show()
 
 		if recipe.spellID then
-			local orange,yellow,green,gray = self:GetTradeSkillLevels(recipe.spellID)
+			local orange,yellow,green,gray = self:GetTradeSkillLevels((recipe.itemID>0 and recipe.itemID) or -recipe.spellID)			-- was spellID now is itemID or -spellID
 
 			SkilletRankFrame.subRanks.green:SetValue(gray)
 			SkilletRankFrame.subRanks.yellow:SetValue(green)
