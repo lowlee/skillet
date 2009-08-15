@@ -197,12 +197,15 @@ function Skillet:CollectRecipeInformation()
 --				local skillData = self:GetSkill(player, trade, i)
 				local skillString = self.db.server.skillDB[player][trade][i]
 
-				local data = { string.split(" ",skillString) }
+				if skillString then
+					local skillData = string.split(" ",skillString)
 
-				if data[1] ~= "header" then
-					local recipeID = string.sub(data[1],2)
+					if skillData ~= "header" then
+						local recipeID = string.sub(skillData,2)
 
-					self.data.skillIndexLookup[player][recipeID] = i
+						recipeID = tonumber(recipeID)
+						self.data.skillIndexLookup[player][recipeID] = i
+					end
 				end
 			end
 		end
@@ -893,6 +896,7 @@ function SkilletData:GetSkill(player,trade,index)
 					skill.difficulty = DifficultyText[difficulty]
 					skill.color = skill_style_type[DifficultyText[difficulty]]
 					skill.tools = nil
+					recipeID = tonumber(recipeID)
 
 					for i=2,#data do
 						local subData = { string.split("=",data[i]) }
